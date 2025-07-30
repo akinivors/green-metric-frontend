@@ -189,17 +189,17 @@
     <div v-if="userStore.user?.role === 'ADMIN'" class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Waste Related Campus Metrics</h2>
 
-      <div v-if="wasteStore.loading">Loading metrics...</div>
+      <div v-if="metricsStore.loading">Loading metrics...</div>
       <div v-else class="space-y-4">
         <div
-          v-for="metric in wasteStore.metrics"
+          v-for="metric in wasteMetrics"
           :key="metric.id"
           class="flex items-center justify-between p-4 border rounded-lg"
         >
           <div>
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
             <p class="text-2xl font-bold text-gray-900">
-              {{ metric.metric_value }} {{ metric.metric_unit }}
+              {{ metric.metricValue }} {{ metric.metricUnit || '' }}
             </p>
           </div>
           <BaseButton variant="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
@@ -218,17 +218,24 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useWasteStore } from '@/stores/waste.store'
+import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
 
 const wasteStore = useWasteStore()
 const userStore = useUserStore()
+const metricsStore = useMetricsStore()
 const route = useRoute()
+
+// Filter metrics for waste category
+const wasteMetrics = computed(() => {
+  return metricsStore.metrics.filter(metric => metric.category === 'WASTE')
+})
 
 // Form for logging new waste data
 const logForm = reactive({
@@ -280,10 +287,12 @@ function closeEditModal() {
 }
 
 async function handleSaveMetric(updatedMetric) {
-  const success = await wasteStore.updateMetric(updatedMetric)
+  const success = await metricsStore.updateMetric(updatedMetric)
   if (success) {
     closeEditModal()
     alert('Metric updated successfully!')
+    // Refresh the waste metrics to show the updated data
+    await metricsStore.getMetrics('WASTE')
   }
 }
 
@@ -298,7 +307,7 @@ watch(
 
 onMounted(() => {
   if (userStore.user?.role === 'ADMIN') {
-    wasteStore.getMetrics()
+    metricsStore.getMetrics('WASTE')
   }
 })
 </script>

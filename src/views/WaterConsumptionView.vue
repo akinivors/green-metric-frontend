@@ -47,13 +47,11 @@
               <td colspan="5" class="text-center p-4">No entries found.</td>
             </tr>
             <tr v-for="entry in waterStore.entries" :key="entry.id">
-              <td class="px-6 py-4">
-                {{ entry.period_start_date }} to {{ entry.period_end_date }}
-              </td>
+              <td class="px-6 py-4">{{ entry.periodStartDate }} to {{ entry.periodEndDate }}</td>
               <td class="px-6 py-4">{{ entry.unitName }}</td>
-              <td class="px-6 py-4">{{ entry.consumption_ton }}</td>
-              <td class="px-6 py-4">{{ entry.recycled_water_usage_liters }}</td>
-              <td class="px-6 py-4">{{ entry.treated_water_consumption_liters }}</td>
+              <td class="px-6 py-4">{{ entry.consumptionTon }}</td>
+              <td class="px-6 py-4">{{ entry.recycledWaterUsageLiters }}</td>
+              <td class="px-6 py-4">{{ entry.treatedWaterConsumptionLiters }}</td>
             </tr>
           </tbody>
         </table>
@@ -88,14 +86,14 @@
             id="newStartDate"
             label="Period Start Date"
             type="date"
-            v-model="logForm.period_start_date"
+            v-model="logForm.periodStartDate"
             required
           />
           <BaseInput
             id="newEndDate"
             label="Period End Date"
             type="date"
-            v-model="logForm.period_end_date"
+            v-model="logForm.periodEndDate"
             required
           />
           <BaseSelect
@@ -111,21 +109,21 @@
             id="newConsumption"
             label="Consumption (Tons)"
             type="number"
-            v-model.number="logForm.consumption_ton"
+            v-model.number="logForm.consumptionTon"
             required
           />
           <BaseInput
             id="newRecycled"
             label="Recycled Water Usage (Liters)"
             type="number"
-            v-model.number="logForm.recycled_water_usage_liters"
+            v-model.number="logForm.recycledWaterUsageLiters"
             required
           />
           <BaseInput
             id="newTreated"
             label="Treated Water Consumption (Liters)"
             type="number"
-            v-model.number="logForm.treated_water_consumption_liters"
+            v-model.number="logForm.treatedWaterConsumptionLiters"
             required
           />
         </div>
@@ -139,17 +137,17 @@
 
     <div v-if="userStore.user?.role === 'ADMIN'" class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Water Related Campus Metrics</h2>
-      <div v-if="waterStore.loading">Loading metrics...</div>
+      <div v-if="metricsStore.loading">Loading metrics...</div>
       <div v-else class="space-y-4">
         <div
-          v-for="metric in waterStore.metrics"
+          v-for="metric in waterMetrics"
           :key="metric.id"
           class="flex items-center justify-between p-4 border rounded-lg"
         >
           <div>
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
             <p class="text-2xl font-bold text-gray-900">
-              {{ metric.metric_value }} {{ metric.metric_unit }}
+              {{ metric.metricValue }} {{ metric.metricUnit || '' }}
             </p>
           </div>
           <BaseButton variant="secondary" @click="openEditModal(metric)">Edit</BaseButton>
@@ -171,6 +169,7 @@ import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useWaterStore } from '@/stores/water.store'
+import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
@@ -178,15 +177,16 @@ import EditMetricModal from '@/components/EditMetricModal.vue'
 
 const userStore = useUserStore()
 const waterStore = useWaterStore()
+const metricsStore = useMetricsStore()
 const route = useRoute()
 
 const logForm = reactive({
-  period_start_date: '',
-  period_end_date: '',
+  periodStartDate: '', // Was period_start_date
+  periodEndDate: '', // Was period_end_date
   unitId: '',
-  consumption_ton: 0,
-  recycled_water_usage_liters: 0,
-  treated_water_consumption_liters: 0,
+  consumptionTon: 0, // Was consumption_ton
+  recycledWaterUsageLiters: 0, // Was recycled_water_usage_liters
+  treatedWaterConsumptionLiters: 0, // Was treated_water_consumption_liters
 })
 
 // This uses the real API units from userStore
@@ -197,29 +197,31 @@ const unitOptions = computed(() => {
   return userStore.units.map((unit) => ({ value: unit.id, label: unit.name }))
 })
 
+// Filter metrics for water category
+const waterMetrics = computed(() => {
+  return metricsStore.metrics.filter(metric => metric.category === 'WATER')
+})
+
 const handleLogSubmit = async () => {
   const selectedUnit = userStore.units.find((u) => u.id === Number(logForm.unitId))
-  const success = await waterStore.submitLog({
-    ...logForm,
-    unitId: Number(logForm.unitId),
-    unitName: selectedUnit?.name,
-  })
+  // No change needed here, the entire logForm is sent correctly now
+  const success = await waterStore.submitLog({ ...logForm, unitName: selectedUnit?.name })
   if (success) {
     alert('Water consumption logged successfully!')
-    // Reset form
+    // Also update the reset object to use camelCase
     Object.assign(logForm, {
-      period_start_date: '',
-      period_end_date: '',
+      periodStartDate: '',
+      periodEndDate: '',
       unitId: '',
-      consumption_ton: 0,
-      recycled_water_usage_liters: 0,
-      treated_water_consumption_liters: 0,
+      consumptionTon: 0,
+      recycledWaterUsageLiters: 0,
+      treatedWaterConsumptionLiters: 0,
     })
   }
 }
 
 const { isEditModalOpen, selectedMetric, openEditModal, closeEditModal, handleSaveMetric } =
-  useMetricEditing(waterStore)
+  useMetricEditing(metricsStore)
 
 watch(
   () => route.query,
@@ -232,7 +234,7 @@ watch(
 onMounted(() => {
   userStore.fetchUnits() // Fetch real units from API
   if (userStore.user?.role === 'ADMIN') {
-    waterStore.getMetrics()
+    metricsStore.getMetrics('WATER')
   }
 })
 

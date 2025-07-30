@@ -2,83 +2,44 @@
 import { ref, reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
-import {
-  fetchWasteMetrics,
-  fetchWasteEntries,
-  submitWasteLog,
-  updateWasteMetric,
-} from '@/services/mock-api.service'
+import { useAuthStore } from './auth.store'
 
 export const useWasteStore = defineStore('waste', () => {
   const router = useRouter()
+  const authStore = useAuthStore()
+
   const entries = ref([])
-  const metrics = ref([]) // For campus metrics
-  const pagination = reactive({ page: 1, totalPages: 1 })
+  const pagination = reactive({ page: 0, totalPages: 1 })
   const filters = reactive({ startDate: '', endDate: '' })
   const loading = ref(false)
   const error = ref(null)
+
+  // --- Actions Connected to Live API ---
 
   async function getEntries() {
     loading.value = true
     error.value = null
     try {
-      const response = await fetchWasteEntries({ ...filters, page: pagination.page })
-      entries.value = response.data
-      Object.assign(pagination, response.pagination)
-    } catch (err) {
-      error.value = 'Failed to load waste data.'
-      console.error('Error fetching waste entries:', err)
-    } finally {
-      loading.value = false
-    }
-  }
+      const params = new URLSearchParams()
+      if (filters.startDate) params.append('startDate', filters.startDate)
+      if (filters.endDate) params.append('endDate', filters.endDate)
+      params.append('page', pagination.page)
 
-  function applyFilters() {
-    pagination.page = 1
-    router.push({ query: { ...filters, page: 1 } })
-  }
+      const response = await fetch(`http://localhost:8080/api/entries/waste?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to fetch waste entries.')
+      }
 
-  function clearFilters() {
-    filters.startDate = ''
-    filters.endDate = ''
-    applyFilters()
-  }
-
-  function changePage(newPage) {
-    if (newPage > 0 && newPage <= pagination.totalPages) {
-      pagination.page = newPage
-      router.push({ query: { ...filters, page: newPage } })
-    }
-  }
-
-  function initializeFromUrl(query) {
-    filters.startDate = query.startDate || ''
-    filters.endDate = query.endDate || ''
-    pagination.page = parseInt(query.page || 1, 10)
-    getEntries()
-  }
-
-  async function getMetrics() {
-    loading.value = true
-    try {
-      metrics.value = await fetchWasteMetrics()
-    } finally {
-      loading.value = false
-    }
-  }
-
-  async function updateMetric(metricData) {
-    loading.value = true
-    error.value = null
-    try {
-      const response = await updateWasteMetric(metricData)
-      if (!response.success) throw new Error('Failed to update metric.')
-      await getMetrics()
-      return true
-    } catch (err) {
-      error.value = 'Failed to update metric.'
-      console.error('Error updating waste metric:', err)
-      return false
+      const data = await response.json()
+      entries.value = data.content
+      pagination.page = data.number
+      pagination.totalPages = data.totalPages
+    } catch (e) {
+      error.value = e.message
+      console.error('Error fetching waste entries:', e)
     } finally {
       loading.value = false
     }
@@ -88,33 +49,66 @@ export const useWasteStore = defineStore('waste', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await submitWasteLog(logData)
-      if (!response.success) throw new Error('Submission failed.')
+      const response = await fetch('http://localhost:8080/api/entries/waste', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authStore.token}`,
+        },
+        body: JSON.stringify(logData),
+      })
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to submit log.')
+      }
       await getEntries() // Refresh list
       return true
-    } catch (err) {
-      error.value = 'Submission failed.'
-      console.error('Error submitting waste log:', err)
+    } catch (e) {
+      error.value = e.message
+      console.error('Error submitting waste log:', e)
       return false
     } finally {
       loading.value = false
     }
   }
 
+  // --- URL and Filter Management ---
+  function applyFilters() {
+    pagination.page = 0
+    router.push({ query: { ...filters, page: 0 } })
+  }
+
+  function clearFilters() {
+    filters.startDate = ''
+    filters.endDate = ''
+    applyFilters()
+  }
+
+  function changePage(newPage) {
+    const zeroIndexedPage = newPage - 1
+    if (zeroIndexedPage >= 0 && zeroIndexedPage < pagination.totalPages) {
+      router.push({ query: { ...filters, page: zeroIndexedPage } })
+    }
+  }
+
+  function initializeFromUrl(query) {
+    filters.startDate = query.startDate || ''
+    filters.endDate = query.endDate || ''
+    pagination.page = parseInt(query.page || 0, 10)
+    getEntries()
+  }
+
   return {
     entries,
-    metrics,
     pagination,
     filters,
     loading,
     error,
     getEntries,
-    getMetrics,
     applyFilters,
     clearFilters,
     changePage,
     initializeFromUrl,
     submitLog,
-    updateMetric,
   }
 })

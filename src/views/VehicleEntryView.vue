@@ -140,15 +140,16 @@
 
     <div v-if="userStore.user?.role === 'ADMIN'" class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Transportation Campus Metrics</h2>
-      <div class="space-y-4">
+      <div v-if="metricsStore.loading" class="text-center">Loading metrics...</div>
+      <div v-else class="space-y-4">
         <div
-          v-for="metric in vehicleStore.metrics"
+          v-for="metric in transportationMetrics"
           :key="metric.id"
           class="flex items-center justify-between p-4 border rounded-lg"
         >
           <div>
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
-            <p class="text-2xl font-bold text-gray-900">{{ metric.metric_value }}</p>
+            <p class="text-2xl font-bold text-gray-900">{{ metric.metricValue }}</p>
           </div>
           <BaseButton variant="secondary" @click="openEditModal(metric)">Edit</BaseButton>
         </div>
@@ -165,16 +166,18 @@
 </template>
 
 <script setup>
-import { onMounted, watch, reactive, ref } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue' // Add computed
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useVehicleStore } from '@/stores/vehicle.store'
+import { useMetricsStore } from '@/stores/metrics.store' // <-- NEW
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
 
 const userStore = useUserStore()
 const vehicleStore = useVehicleStore()
+const metricsStore = useMetricsStore() // <-- NEW
 const route = useRoute()
 
 // The component no longer holds its own filter state. It just tells the store when to act.
@@ -191,6 +194,11 @@ const logForm = reactive({
 const isEditModalOpen = ref(false)
 const selectedMetric = ref(null)
 
+// NEW computed property to filter metrics for this page
+const transportationMetrics = computed(() => {
+  return metricsStore.metrics.filter((m) => m.category === 'TRANSPORTATION')
+})
+
 function openEditModal(metric) {
   selectedMetric.value = metric
   isEditModalOpen.value = true
@@ -202,12 +210,14 @@ function closeEditModal() {
 }
 
 async function handleSaveMetric(updatedMetric) {
-  const success = await vehicleStore.updateMetric(updatedMetric)
+  // Call the central metrics store's action
+  const success = await metricsStore.createMetric({
+    ...updatedMetric,
+    // The metric object from the backend already has the category
+  })
   if (success) {
     closeEditModal()
-    alert('Metric updated successfully!')
-  } else {
-    alert('Failed to update metric. Please try again.')
+    alert('Metric updated successfully! A new version has been saved.')
   }
 }
 
@@ -244,8 +254,12 @@ watch(
 ) // immediate:true runs this once on component load
 
 onMounted(() => {
+  // Logic for vehicle entries remains the same
+  // vehicleStore.initializeFromUrl(route.query);
+
+  // Fetch metrics from the new central store
   if (userStore.user?.role === 'ADMIN') {
-    vehicleStore.getMetrics()
+    metricsStore.getMetrics('TRANSPORTATION')
   }
 })
 </script>

@@ -19,7 +19,7 @@ export const useUnitsStore = defineStore('units', () => {
     console.log('Units store: Fetching units from API...')
     loading.value = true
     error.value = null
-    
+
     try {
       // Use the userStore to fetch units since units come from real API
       const { useUserStore } = await import('./user.store')
