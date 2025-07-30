@@ -3,6 +3,7 @@ import { ref, reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from './auth.store'
+import { useUserStore } from './user.store'
 import { useMetricsStore } from './metrics.store' // Use the central metrics store
 
 export const useElectricityStore = defineStore('electricity', () => {
@@ -12,7 +13,7 @@ export const useElectricityStore = defineStore('electricity', () => {
 
   const entries = ref([])
   const pagination = reactive({ page: 0, totalPages: 1 })
-  const filters = reactive({ startDate: '', endDate: '' })
+  const filters = reactive({ startDate: '', endDate: '', unitId: null })
   const loading = ref(false)
   const error = ref(null)
 
@@ -24,6 +25,20 @@ export const useElectricityStore = defineStore('electricity', () => {
       if (filters.startDate) params.append('startDate', filters.startDate)
       if (filters.endDate) params.append('endDate', filters.endDate)
       params.append('page', pagination.page)
+
+      // NEW: Add unitId to the request if it's provided by the user's profile
+      const userStore = useUserStore()
+      let unitToFilter = filters.unitId
+
+      // If user is a Building Manager, force their unitId
+      if (userStore.user?.role === 'BINA_GOREVLISI') {
+        unitToFilter = userStore.user.unitId
+      }
+
+      // Add the unitId to the request if it's set
+      if (unitToFilter) {
+        params.append('unitId', unitToFilter)
+      }
 
       const response = await fetch(
         `http://localhost:8080/api/consumption/electricity?${params.toString()}`,
@@ -92,9 +107,9 @@ export const useElectricityStore = defineStore('electricity', () => {
   }
 
   function changePage(newPage) {
-    const zeroIndexedPage = newPage - 1
-    if (zeroIndexedPage >= 0 && zeroIndexedPage < pagination.totalPages) {
-      router.push({ query: { ...filters, page: zeroIndexedPage } })
+    // newPage is already the correct 0-indexed number
+    if (newPage >= 0 && newPage < pagination.totalPages) {
+      router.push({ query: { ...filters, page: newPage } })
     }
   }
 

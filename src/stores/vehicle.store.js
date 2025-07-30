@@ -95,10 +95,9 @@ export const useVehicleStore = defineStore('vehicle', () => {
   }
 
   function changePage(newPage) {
-    // Page numbers from UI are 1-based, convert to 0-based for backend
-    const zeroIndexedPage = newPage - 1
-    if (zeroIndexedPage >= 0 && zeroIndexedPage < pagination.totalPages) {
-      router.push({ query: { ...filters, page: zeroIndexedPage } })
+    // newPage is already the correct 0-indexed number
+    if (newPage >= 0 && newPage < pagination.totalPages) {
+      router.push({ query: { ...filters, page: newPage } })
     }
   }
 

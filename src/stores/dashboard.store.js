@@ -11,6 +11,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const vehicleStats = ref(null)
   const wasteStats = ref(null)
   const recentActivity = ref([]) // <-- New state for activity feed
+  const allActivities = ref([]) // <-- NEW: State for the activity log page
   const loading = ref(false)
   const error = ref(null)
 
@@ -100,14 +101,75 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  // --- NEW ACTION for the "All Activity" Page ---
+  async function fetchAllActivities() {
+    // Only fetch if the list is empty to avoid refetching on every page visit
+    if (allActivities.value.length > 0) return
+
+    loading.value = true
+    error.value = null
+    try {
+      const vehicleStore = useVehicleStore()
+      const waterStore = useWaterStore()
+      const electricityStore = useElectricityStore()
+      const wasteStore = useWasteStore()
+
+      // Clear filters and set pagination to get all entries from each store
+      vehicleStore.filters.startDate = ''
+      vehicleStore.filters.endDate = ''
+      vehicleStore.pagination.page = 0
+
+      waterStore.filters.startDate = ''
+      waterStore.filters.endDate = ''
+      waterStore.pagination.page = 0
+
+      electricityStore.filters.startDate = ''
+      electricityStore.filters.endDate = ''
+      electricityStore.pagination.page = 0
+
+      wasteStore.filters.startDate = ''
+      wasteStore.filters.endDate = ''
+      wasteStore.pagination.page = 0
+
+      // Fetch ALL entries from each store
+      await Promise.all([
+        vehicleStore.getEntries(),
+        waterStore.getEntries(),
+        electricityStore.getEntries(),
+        wasteStore.getEntries(),
+      ])
+
+      const combined = [
+        ...vehicleStore.entries.map((e) => ({ ...e, type: 'Vehicle Entry', date: e.entryDate })),
+        ...waterStore.entries.map((e) => ({ ...e, type: 'Water Log', date: e.periodEndDate })),
+        ...electricityStore.entries.map((e) => ({
+          ...e,
+          type: 'Electricity Log',
+          date: e.periodEndDate,
+        })),
+        ...wasteStore.entries.map((e) => ({ ...e, type: 'Waste Log', date: e.dataDate })),
+      ]
+
+      combined.sort((a, b) => new Date(b.date) - new Date(a.date))
+      allActivities.value = combined
+    } catch (e) {
+      error.value = 'Failed to load system activity.'
+      console.error('Dashboard activity error:', e)
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     consumptionStats,
     vehicleStats,
     wasteStats,
     recentActivity, // <-- Expose new state
+    allActivities, // <-- Expose new state
     loading,
     error,
     getStats,
     getRecentActivity, // <-- Expose new action
+    fetchAllActivities, // <-- Expose new action
   }
 })

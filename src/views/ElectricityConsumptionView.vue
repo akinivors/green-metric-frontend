@@ -7,7 +7,7 @@
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Historical Consumption Data</h2>
 
       <!-- Filters -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 items-end">
         <BaseInput
           id="startDate"
           label="Start Date"
@@ -19,6 +19,13 @@
           label="End Date"
           type="date"
           v-model="electricityStore.filters.endDate"
+        />
+        <BaseSelect
+          v-if="userStore.user?.role === 'ADMIN'"
+          id="unitFilter"
+          label="Filter by Unit"
+          v-model="electricityStore.filters.unitId"
+          :options="unitOptionsForFilter"
         />
         <div class="flex space-x-2">
           <BaseButton @click="electricityStore.applyFilters" class="w-full"> Apply </BaseButton>
@@ -67,21 +74,23 @@
         <!-- Pagination -->
         <div class="flex justify-between items-center mt-4">
           <span class="text-sm text-gray-600">
-            Page {{ electricityStore.pagination.page }} of
+            Page {{ electricityStore.pagination.page + 1 }} of
             {{ electricityStore.pagination.totalPages }}
           </span>
           <div>
             <BaseButton
               variant="secondary"
               @click="electricityStore.changePage(electricityStore.pagination.page - 1)"
-              :disabled="electricityStore.pagination.page <= 1"
+              :disabled="electricityStore.pagination.page <= 0"
             >
               Previous
             </BaseButton>
             <BaseButton
               variant="secondary"
               @click="electricityStore.changePage(electricityStore.pagination.page + 1)"
-              :disabled="electricityStore.pagination.page >= electricityStore.pagination.totalPages"
+              :disabled="
+                electricityStore.pagination.page >= electricityStore.pagination.totalPages - 1
+              "
               class="ml-2"
             >
               Next
@@ -116,6 +125,7 @@
             label="Unit"
             v-model="logForm.unitId"
             :options="unitOptions"
+            :disabled="userStore.user?.role === 'BINA_GOREVLISI'"
             required
           />
           <BaseInput
@@ -171,6 +181,7 @@ import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useElectricityStore } from '@/stores/electricity.store'
+import { useUnitsStore } from '@/stores/units.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
@@ -178,6 +189,7 @@ import EditMetricModal from '@/components/EditMetricModal.vue'
 
 const electricityStore = useElectricityStore()
 const userStore = useUserStore()
+const unitsStore = useUnitsStore()
 const route = useRoute()
 
 // Form for logging new consumption
@@ -197,6 +209,17 @@ const unitOptions = computed(() => {
     value: unit.id,
     label: unit.name,
   }))
+})
+
+// Admin unit filter options
+const unitOptionsForFilter = computed(() => {
+  if (!unitsStore.units || unitsStore.units.length === 0) {
+    return [{ value: '', label: 'All Units' }]
+  }
+  return [
+    { value: '', label: 'All Units' },
+    ...unitsStore.units.map((unit) => ({ value: unit.id, label: unit.name })),
+  ]
 })
 
 const handleLogSubmit = async () => {
@@ -251,8 +274,16 @@ watch(
 )
 
 onMounted(() => {
+  // Pre-fill the form's unitId if the user is a Building Manager
+  if (userStore.user?.role === 'BINA_GOREVLISI') {
+    logForm.unitId = userStore.user.unitId
+  }
+
   // Fetch real units from API (consistent with our architecture)
   userStore.fetchUnits()
+
+  // Fetch units for admin filtering
+  unitsStore.fetchUnits()
 
   if (userStore.user?.role === 'ADMIN') {
     electricityStore.getMetrics()

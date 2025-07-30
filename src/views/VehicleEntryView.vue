@@ -63,24 +63,25 @@
           </tbody>
         </table>
         <div class="flex justify-between items-center mt-4">
-          <span class="text-sm text-gray-600"
-            >Page {{ vehicleStore.pagination.page }} of
-            {{ vehicleStore.pagination.totalPages }}</span
-          >
+          <span class="text-sm text-gray-600">
+            Page {{ vehicleStore.pagination.page + 1 }} of {{ vehicleStore.pagination.totalPages }}
+          </span>
           <div>
             <BaseButton
               variant="secondary"
               @click="vehicleStore.changePage(vehicleStore.pagination.page - 1)"
-              :disabled="vehicleStore.pagination.page <= 1"
-              >Previous</BaseButton
+              :disabled="vehicleStore.pagination.page <= 0"
             >
+              Previous
+            </BaseButton>
             <BaseButton
               variant="secondary"
               @click="vehicleStore.changePage(vehicleStore.pagination.page + 1)"
-              :disabled="vehicleStore.pagination.page >= vehicleStore.pagination.totalPages"
+              :disabled="vehicleStore.pagination.page >= vehicleStore.pagination.totalPages - 1"
               class="ml-2"
-              >Next</BaseButton
             >
+              Next
+            </BaseButton>
           </div>
         </div>
       </div>

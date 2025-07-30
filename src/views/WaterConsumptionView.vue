@@ -5,7 +5,7 @@
     <div class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Historical Consumption Data</h2>
 
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 items-end">
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6 items-end">
         <BaseInput
           id="startDate"
           label="Start Date"
@@ -13,6 +13,13 @@
           v-model="waterStore.filters.startDate"
         />
         <BaseInput id="endDate" label="End Date" type="date" v-model="waterStore.filters.endDate" />
+        <BaseSelect
+          v-if="userStore.user?.role === 'ADMIN'"
+          id="unitFilter"
+          label="Filter by Unit"
+          v-model="waterStore.filters.unitId"
+          :options="unitOptionsForFilter"
+        />
         <div class="flex space-x-2">
           <BaseButton @click="waterStore.applyFilters" class="w-full">Apply</BaseButton>
           <BaseButton @click="waterStore.clearFilters" variant="secondary" class="w-full"
@@ -56,23 +63,25 @@
           </tbody>
         </table>
         <div class="flex justify-between items-center mt-4">
-          <span class="text-sm text-gray-600"
-            >Page {{ waterStore.pagination.page }} of {{ waterStore.pagination.totalPages }}</span
-          >
+          <span class="text-sm text-gray-600">
+            Page {{ waterStore.pagination.page + 1 }} of {{ waterStore.pagination.totalPages }}
+          </span>
           <div>
             <BaseButton
               variant="secondary"
               @click="waterStore.changePage(waterStore.pagination.page - 1)"
-              :disabled="waterStore.pagination.page <= 1"
-              >Previous</BaseButton
+              :disabled="waterStore.pagination.page <= 0"
             >
+              Previous
+            </BaseButton>
             <BaseButton
               variant="secondary"
               @click="waterStore.changePage(waterStore.pagination.page + 1)"
-              :disabled="waterStore.pagination.page >= waterStore.pagination.totalPages"
+              :disabled="waterStore.pagination.page >= waterStore.pagination.totalPages - 1"
               class="ml-2"
-              >Next</BaseButton
             >
+              Next
+            </BaseButton>
           </div>
         </div>
       </div>
@@ -101,6 +110,7 @@
             label="Unit"
             v-model="logForm.unitId"
             :options="unitOptions"
+            :disabled="userStore.user?.role === 'BINA_GOREVLISI'"
             required
           />
         </div>
@@ -170,6 +180,7 @@ import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useWaterStore } from '@/stores/water.store'
 import { useMetricsStore } from '@/stores/metrics.store'
+import { useUnitsStore } from '@/stores/units.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
@@ -178,6 +189,7 @@ import EditMetricModal from '@/components/EditMetricModal.vue'
 const userStore = useUserStore()
 const waterStore = useWaterStore()
 const metricsStore = useMetricsStore()
+const unitsStore = useUnitsStore()
 const route = useRoute()
 
 const logForm = reactive({
@@ -197,9 +209,20 @@ const unitOptions = computed(() => {
   return userStore.units.map((unit) => ({ value: unit.id, label: unit.name }))
 })
 
+// Admin unit filter options
+const unitOptionsForFilter = computed(() => {
+  if (!unitsStore.units || unitsStore.units.length === 0) {
+    return [{ value: '', label: 'All Units' }]
+  }
+  return [
+    { value: '', label: 'All Units' },
+    ...unitsStore.units.map((unit) => ({ value: unit.id, label: unit.name })),
+  ]
+})
+
 // Filter metrics for water category
 const waterMetrics = computed(() => {
-  return metricsStore.metrics.filter(metric => metric.category === 'WATER')
+  return metricsStore.metrics.filter((metric) => metric.category === 'WATER')
 })
 
 const handleLogSubmit = async () => {
@@ -232,7 +255,16 @@ watch(
 )
 
 onMounted(() => {
+  // Pre-fill the form's unitId if the user is a Building Manager
+  if (userStore.user?.role === 'BINA_GOREVLISI') {
+    logForm.unitId = userStore.user.unitId
+  }
+
   userStore.fetchUnits() // Fetch real units from API
+
+  // Fetch units for admin filtering
+  unitsStore.fetchUnits()
+
   if (userStore.user?.role === 'ADMIN') {
     metricsStore.getMetrics('WATER')
   }

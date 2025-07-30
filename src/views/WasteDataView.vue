@@ -45,39 +45,34 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Submitted By
               </th>
+              <th class="relative px-6 py-3"><span class="sr-only">Details</span></th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!wasteStore.entries.length">
-              <td colspan="5" class="text-center p-4">No entries found.</td>
+              <td colspan="6" class="text-center p-4">No entries found.</td>
             </tr>
-            <tr v-for="entry in wasteStore.entries" :key="entry.id">
-              <td class="px-6 py-4">{{ entry.dataDate }}</td>
-              <td class="px-6 py-4">{{ entry.organicProductionKg }}</td>
-              <td class="px-6 py-4">{{ entry.inorganicRecycledKg }}</td>
-              <td class="px-6 py-4">{{ entry.toxicWasteKg }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
-            </tr>
+            <WasteDataRow v-for="entry in wasteStore.entries" :key="entry.id" :entry="entry" />
           </tbody>
         </table>
 
         <!-- Pagination -->
         <div class="flex justify-between items-center mt-4">
           <span class="text-sm text-gray-600">
-            Page {{ wasteStore.pagination.page }} of {{ wasteStore.pagination.totalPages }}
+            Page {{ wasteStore.pagination.page + 1 }} of {{ wasteStore.pagination.totalPages }}
           </span>
           <div>
             <BaseButton
               variant="secondary"
               @click="wasteStore.changePage(wasteStore.pagination.page - 1)"
-              :disabled="wasteStore.pagination.page <= 1"
+              :disabled="wasteStore.pagination.page <= 0"
             >
               Previous
             </BaseButton>
             <BaseButton
               variant="secondary"
               @click="wasteStore.changePage(wasteStore.pagination.page + 1)"
-              :disabled="wasteStore.pagination.page >= wasteStore.pagination.totalPages"
+              :disabled="wasteStore.pagination.page >= wasteStore.pagination.totalPages - 1"
               class="ml-2"
             >
               Next
@@ -226,6 +221,7 @@ import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import WasteDataRow from '@/components/WasteDataRow.vue'
 
 const wasteStore = useWasteStore()
 const userStore = useUserStore()
@@ -234,7 +230,7 @@ const route = useRoute()
 
 // Filter metrics for waste category
 const wasteMetrics = computed(() => {
-  return metricsStore.metrics.filter(metric => metric.category === 'WASTE')
+  return metricsStore.metrics.filter((metric) => metric.category === 'WASTE')
 })
 
 // Form for logging new waste data
