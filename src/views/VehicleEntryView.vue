@@ -212,13 +212,10 @@ function closeEditModal() {
 
 async function handleSaveMetric(updatedMetric) {
   // Call the central metrics store's action
-  const success = await metricsStore.createMetric({
-    ...updatedMetric,
-    // The metric object from the backend already has the category
-  })
+  const success = await metricsStore.createMetric(updatedMetric)
   if (success) {
     closeEditModal()
-    alert('Metric updated successfully! A new version has been saved.')
+    alert('Metric history updated successfully!')
   }
 }
 
@@ -258,9 +255,9 @@ onMounted(() => {
   // Logic for vehicle entries remains the same
   // vehicleStore.initializeFromUrl(route.query);
 
-  // Fetch metrics from the new central store
+  // Fetch only the metrics for this page's category
   if (userStore.user?.role === 'ADMIN') {
-    metricsStore.getMetrics('TRANSPORTATION')
+    metricsStore.getMetrics({ category: 'TRANSPORTATION' })
   }
 })
 </script>

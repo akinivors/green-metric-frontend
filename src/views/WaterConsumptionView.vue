@@ -157,7 +157,7 @@
           <div>
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
             <p class="text-2xl font-bold text-gray-900">
-              {{ metric.metricValue }} {{ metric.metricUnit || '' }}
+              {{ metric.metricValue }} {{ metric.unit || '' }}
             </p>
           </div>
           <BaseButton variant="secondary" @click="openEditModal(metric)">Edit</BaseButton>
@@ -286,10 +286,10 @@ function useMetricEditing(store) {
   }
 
   async function handleSaveMetric(updatedMetric) {
-    const success = await store.updateMetric(updatedMetric)
+    const success = await store.createMetric(updatedMetric)
     if (success) {
       closeEditModal()
-      alert('Metric updated successfully!')
+      alert('Metric history updated successfully!')
     }
   }
   return { isEditModalOpen, selectedMetric, openEditModal, closeEditModal, handleSaveMetric }

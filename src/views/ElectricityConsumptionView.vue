@@ -148,17 +148,17 @@
     <div v-if="userStore.user?.role === 'ADMIN'" class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">Electricity Related Campus Metrics</h2>
 
-      <div v-if="electricityStore.loading">Loading metrics...</div>
+      <div v-if="metricsStore.loading && !electricityMetrics.length">Loading metrics...</div>
       <div v-else class="space-y-4">
         <div
-          v-for="metric in electricityStore.metrics"
+          v-for="metric in electricityMetrics"
           :key="metric.id"
           class="flex items-center justify-between p-4 border rounded-lg"
         >
           <div>
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
             <p class="text-2xl font-bold text-gray-900">
-              {{ metric.metric_value }} {{ metric.metric_unit }}
+              {{ metric.metricValue }} {{ metric.unit }}
             </p>
           </div>
           <BaseButton variant="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
@@ -182,6 +182,7 @@ import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useElectricityStore } from '@/stores/electricity.store'
 import { useUnitsStore } from '@/stores/units.store'
+import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
@@ -190,6 +191,7 @@ import EditMetricModal from '@/components/EditMetricModal.vue'
 const electricityStore = useElectricityStore()
 const userStore = useUserStore()
 const unitsStore = useUnitsStore()
+const metricsStore = useMetricsStore()
 const route = useRoute()
 
 // Form for logging new consumption
@@ -198,6 +200,11 @@ const logForm = reactive({
   periodEndDate: '',
   unitId: '',
   consumptionKwh: 0,
+})
+
+// Add computed property to filter the correct metrics
+const electricityMetrics = computed(() => {
+  return metricsStore.metrics.filter(metric => metric.category === 'ENERGY_CLIMATE_CHANGE')
 })
 
 // Using real API units from userStore (consistent with our architecture)
@@ -257,10 +264,10 @@ function closeEditModal() {
 }
 
 async function handleSaveMetric(updatedMetric) {
-  const success = await electricityStore.updateMetric(updatedMetric)
+  const success = await metricsStore.createMetric(updatedMetric)
   if (success) {
     closeEditModal()
-    alert('Metric updated successfully!')
+    alert('Metric history updated successfully!')
   }
 }
 
@@ -286,7 +293,8 @@ onMounted(() => {
   unitsStore.fetchUnits()
 
   if (userStore.user?.role === 'ADMIN') {
-    electricityStore.getMetrics()
+    // Fetch only the metrics for this page's category
+    metricsStore.getMetrics({ category: 'ENERGY_CLIMATE_CHANGE' })
   }
 })
 </script>

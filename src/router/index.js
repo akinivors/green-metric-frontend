@@ -9,6 +9,7 @@ import ElectricityConsumptionView from '../views/ElectricityConsumptionView.vue'
 import WasteDataView from '../views/WasteDataView.vue'
 import ProfileView from '../views/ProfileView.vue'
 import AllActivityView from '../views/AllActivityView.vue'
+import CampusMetricsView from '../views/CampusMetricsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -70,6 +71,12 @@ const router = createRouter({
           path: '/activity-log',
           name: 'activity-log',
           component: AllActivityView,
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: '/campus-metrics',
+          name: 'campus-metrics',
+          component: CampusMetricsView,
           meta: { requiresAdmin: true },
         },
       ],

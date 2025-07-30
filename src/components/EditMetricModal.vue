@@ -13,9 +13,7 @@
             type="text"
             v-model="editableValue"
           />
-          <span v-if="metricToEdit.metric_unit" class="pb-2 text-gray-500">{{
-            metricToEdit.metric_unit
-          }}</span>
+          <span v-if="metricToEdit.unit" class="pb-2 text-gray-500">{{ metricToEdit.unit }}</span>
         </div>
 
         <div class="flex justify-end space-x-4 mt-6">
@@ -49,10 +47,10 @@ const editableValue = ref('')
 onMounted(() => {
   // Create a local copy to avoid directly mutating the prop
   metricToEdit.value = { ...props.metric }
-  editableValue.value = props.metric.metric_value
+  editableValue.value = props.metric.metricValue
 })
 
 const handleSubmit = () => {
-  emit('save', { ...metricToEdit.value, metric_value: editableValue.value })
+  emit('save', { ...metricToEdit.value, metricValue: editableValue.value })
 }
 </script>

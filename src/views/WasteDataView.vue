@@ -194,7 +194,7 @@
           <div>
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
             <p class="text-2xl font-bold text-gray-900">
-              {{ metric.metricValue }} {{ metric.metricUnit || '' }}
+              {{ metric.metricValue }} {{ metric.unit || '' }}
             </p>
           </div>
           <BaseButton variant="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
@@ -283,10 +283,10 @@ function closeEditModal() {
 }
 
 async function handleSaveMetric(updatedMetric) {
-  const success = await metricsStore.updateMetric(updatedMetric)
+  const success = await metricsStore.createMetric(updatedMetric)
   if (success) {
     closeEditModal()
-    alert('Metric updated successfully!')
+    alert('Metric history updated successfully!')
     // Refresh the waste metrics to show the updated data
     await metricsStore.getMetrics('WASTE')
   }
