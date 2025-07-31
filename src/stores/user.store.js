@@ -141,6 +141,32 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  // Add the new deleteUser function
+  async function deleteUser(userId) {
+    loading.value = true
+    error.value = null
+    const authStore = useAuthStore()
+    try {
+      const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete user.')
+      }
+      // Refresh the user list after successful deletion
+      await fetchAllUsers()
+      return true
+    } catch (e) {
+      error.value = e.message
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   function clearUser() {
     user.value = null
   }
@@ -156,6 +182,7 @@ export const useUserStore = defineStore('user', () => {
     fetchUnits, // Real API fetchUnits
     changePassword,
     createUser,
+    deleteUser, // Export the new deleteUser function
     clearUser,
   }
 })

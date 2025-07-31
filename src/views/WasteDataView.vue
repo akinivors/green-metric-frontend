@@ -45,14 +45,31 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Submitted By
               </th>
-              <th class="relative px-6 py-3"><span class="sr-only">Details</span></th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!wasteStore.entries.length">
               <td colspan="6" class="text-center p-4">No entries found.</td>
             </tr>
-            <WasteDataRow v-for="entry in wasteStore.entries" :key="entry.id" :entry="entry" />
+            <tr v-for="entry in wasteStore.entries" :key="entry.id">
+              <td class="px-6 py-4">{{ entry.dataDate }}</td>
+              <td class="px-6 py-4">{{ entry.organicProductionKg }}</td>
+              <td class="px-6 py-4">{{ entry.inorganicRecycledKg }}</td>
+              <td class="px-6 py-4">{{ entry.toxicWasteKg }}</td>
+              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button
+                  @click="handleDelete(entry)"
+                  class="text-red-600 hover:text-red-900"
+                  :disabled="wasteStore.loading"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
           </tbody>
         </table>
 
@@ -221,7 +238,6 @@ import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
-import WasteDataRow from '@/components/WasteDataRow.vue'
 
 const wasteStore = useWasteStore()
 const userStore = useUserStore()
@@ -265,6 +281,21 @@ const handleLogSubmit = async () => {
       treatedToxicWasteKg: 0,
       sewageDisposalLiters: 0,
     })
+  }
+}
+
+const handleDelete = async (entry) => {
+  if (
+    confirm(
+      `Are you sure you want to delete the waste data entry for ${entry.dataDate}? This action cannot be undone.`,
+    )
+  ) {
+    const success = await wasteStore.deleteWasteData(entry.id)
+    if (success) {
+      alert('Entry deleted successfully.')
+    } else {
+      alert('Failed to delete entry. Please check the console for errors.')
+    }
   }
 }
 

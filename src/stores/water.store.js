@@ -90,6 +90,32 @@ export const useWaterStore = defineStore('water', () => {
     }
   }
 
+  // Add the new deleteWaterConsumption function
+  async function deleteWaterConsumption(entryId) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await fetch(`http://localhost:8080/api/consumption/water/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete water consumption entry.')
+      }
+      // Refresh the entry list after successful deletion
+      await getEntries()
+      return true
+    } catch (e) {
+      error.value = e.message
+      console.error('Error deleting water consumption entry:', e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // --- URL and Filter Management ---
   function applyFilters() {
     pagination.page = 0
@@ -123,6 +149,7 @@ export const useWaterStore = defineStore('water', () => {
     loading,
     error,
     getEntries,
+    deleteWaterConsumption, // Export the new deleteWaterConsumption function
     applyFilters,
     clearFilters,
     changePage,

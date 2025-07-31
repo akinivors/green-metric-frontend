@@ -34,11 +34,17 @@
             >
               Role
             </th>
+            <th
+              scope="col"
+              class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-if="userStore.users.length === 0">
-            <td colspan="3" class="px-6 py-4 text-center text-gray-500">No users found.</td>
+            <td colspan="4" class="px-6 py-4 text-center text-gray-500">No users found.</td>
           </tr>
           <tr v-for="user in userStore.users" :key="user.id">
             <td class="px-6 py-4 whitespace-nowrap">{{ user.fullName }}</td>
@@ -50,6 +56,19 @@
                 {{ user.role }}
               </span>
             </td>
+            <td
+              v-if="user.id !== userStore.user.id"
+              class="px-6 py-4 whitespace-nowrap text-sm font-medium"
+            >
+              <button
+                @click="handleDelete(user)"
+                class="text-red-600 hover:text-red-900"
+                :disabled="userStore.loading"
+              >
+                Delete
+              </button>
+            </td>
+            <td v-else class="px-6 py-4"></td>
           </tr>
         </tbody>
       </table>
@@ -63,6 +82,23 @@ import { useUserStore } from '@/stores/user.store'
 import BaseButton from '@/components/BaseButton.vue'
 
 const userStore = useUserStore()
+
+// Add delete handler function
+const handleDelete = async (user) => {
+  if (
+    confirm(
+      `Are you sure you want to delete the user "${user.fullName}"? This action cannot be undone.`,
+    )
+  ) {
+    const success = await userStore.deleteUser(user.id)
+    if (success) {
+      alert('User deleted successfully.')
+    } else {
+      // The error will be displayed automatically by the component's error div
+      alert('Failed to delete user.')
+    }
+  }
+}
 
 onMounted(() => {
   userStore.fetchAllUsers()

@@ -1,19 +1,19 @@
 // src/stores/dashboard.store.js
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { useVehicleStore } from './vehicle.store'
-import { useWaterStore } from './water.store'
-import { useElectricityStore } from './electricity.store'
-import { useWasteStore } from './waste.store'
+import { useAuthStore } from './auth.store' // <-- Import auth store
 
 export const useDashboardStore = defineStore('dashboard', () => {
   const consumptionStats = ref(null)
   const vehicleStats = ref(null)
   const wasteStats = ref(null)
-  const recentActivity = ref([]) // <-- New state for activity feed
-  const allActivities = ref([]) // <-- NEW: State for the activity log page
+  const recentActivity = ref([])
+  // AFTER: Add new state for the full activity log and pagination
+  const activityLog = ref([])
+  const activityLogPagination = ref({})
   const loading = ref(false)
   const error = ref(null)
+  const authStore = useAuthStore() // <-- Initialize auth store
 
   async function getStats(period = 'last_month') {
     loading.value = true
@@ -41,119 +41,31 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  // --- NEW ACTION for Recent Activity ---
-  async function getRecentActivity() {
+  // AFTER: Replace it with this new getActivityLog function.
+  async function getActivityLog(page = 0, size = 20) {
     loading.value = true
     error.value = null
     try {
-      // Initialize other stores to use their actions
-      const vehicleStore = useVehicleStore()
-      const waterStore = useWaterStore()
-      const electricityStore = useElectricityStore()
-      const wasteStore = useWasteStore()
-
-      // Set pagination to get the first few entries from each store
-      vehicleStore.pagination.page = 0
-      waterStore.pagination.page = 0
-      electricityStore.pagination.page = 0
-      wasteStore.pagination.page = 0
-
-      // Clear any existing filters to get the most recent entries
-      vehicleStore.filters.startDate = ''
-      vehicleStore.filters.endDate = ''
-      waterStore.filters.startDate = ''
-      waterStore.filters.endDate = ''
-      electricityStore.filters.startDate = ''
-      electricityStore.filters.endDate = ''
-      wasteStore.filters.startDate = ''
-      wasteStore.filters.endDate = ''
-
-      // Fetch the first page of recent entries from each store in parallel
-      await Promise.all([
-        vehicleStore.getEntries(),
-        waterStore.getEntries(),
-        electricityStore.getEntries(),
-        wasteStore.getEntries(),
-      ])
-
-      // Combine and format the data from all stores
-      const combined = [
-        ...vehicleStore.entries.map((e) => ({ ...e, type: 'Vehicle Entry', date: e.entryDate })),
-        ...waterStore.entries.map((e) => ({ ...e, type: 'Water Log', date: e.periodEndDate })),
-        ...electricityStore.entries.map((e) => ({
-          ...e,
-          type: 'Electricity Log',
-          date: e.periodEndDate,
-        })),
-        ...wasteStore.entries.map((e) => ({ ...e, type: 'Waste Log', date: e.dataDate })),
-      ]
-
-      // Sort all entries by date, descending
-      combined.sort((a, b) => new Date(b.date) - new Date(a.date))
-
-      // Take the top 5 most recent activities
-      recentActivity.value = combined.slice(0, 5)
+      const params = new URLSearchParams({ page, size })
+      const response = await fetch(`http://localhost:8080/api/activity-log?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${authStore.token}` },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to fetch activity log.')
+      }
+      const data = await response.json()
+      activityLog.value = data.content
+      activityLogPagination.value = {
+        page: data.number,
+        totalPages: data.totalPages,
+        totalElements: data.totalElements,
+      }
+      // For the dashboard preview, still populate recentActivity
+      if (page === 0) {
+        recentActivity.value = data.content.slice(0, 5)
+      }
     } catch (e) {
-      error.value = 'Failed to load recent activity.'
-      console.error('Dashboard activity error:', e)
-    } finally {
-      loading.value = false
-    }
-  }
-
-  // --- NEW ACTION for the "All Activity" Page ---
-  async function fetchAllActivities() {
-    // Only fetch if the list is empty to avoid refetching on every page visit
-    if (allActivities.value.length > 0) return
-
-    loading.value = true
-    error.value = null
-    try {
-      const vehicleStore = useVehicleStore()
-      const waterStore = useWaterStore()
-      const electricityStore = useElectricityStore()
-      const wasteStore = useWasteStore()
-
-      // Clear filters and set pagination to get all entries from each store
-      vehicleStore.filters.startDate = ''
-      vehicleStore.filters.endDate = ''
-      vehicleStore.pagination.page = 0
-
-      waterStore.filters.startDate = ''
-      waterStore.filters.endDate = ''
-      waterStore.pagination.page = 0
-
-      electricityStore.filters.startDate = ''
-      electricityStore.filters.endDate = ''
-      electricityStore.pagination.page = 0
-
-      wasteStore.filters.startDate = ''
-      wasteStore.filters.endDate = ''
-      wasteStore.pagination.page = 0
-
-      // Fetch ALL entries from each store
-      await Promise.all([
-        vehicleStore.getEntries(),
-        waterStore.getEntries(),
-        electricityStore.getEntries(),
-        wasteStore.getEntries(),
-      ])
-
-      const combined = [
-        ...vehicleStore.entries.map((e) => ({ ...e, type: 'Vehicle Entry', date: e.entryDate })),
-        ...waterStore.entries.map((e) => ({ ...e, type: 'Water Log', date: e.periodEndDate })),
-        ...electricityStore.entries.map((e) => ({
-          ...e,
-          type: 'Electricity Log',
-          date: e.periodEndDate,
-        })),
-        ...wasteStore.entries.map((e) => ({ ...e, type: 'Waste Log', date: e.dataDate })),
-      ]
-
-      combined.sort((a, b) => new Date(b.date) - new Date(a.date))
-      allActivities.value = combined
-    } catch (e) {
-      error.value = 'Failed to load system activity.'
+      error.value = 'Failed to load activity log.'
       console.error('Dashboard activity error:', e)
     } finally {
       loading.value = false
@@ -164,12 +76,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
     consumptionStats,
     vehicleStats,
     wasteStats,
-    recentActivity, // <-- Expose new state
-    allActivities, // <-- Expose new state
+    recentActivity,
+    // AFTER: Expose new state and actions
+    activityLog,
+    activityLogPagination,
     loading,
     error,
     getStats,
-    getRecentActivity, // <-- Expose new action
-    fetchAllActivities, // <-- Expose new action
+    getActivityLog,
   }
 })

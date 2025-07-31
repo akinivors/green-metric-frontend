@@ -36,9 +36,7 @@ export const useMetricsStore = defineStore('metrics', () => {
 
       if (category) {
         // If a specific category was requested, intelligently merge the new data
-        const otherMetrics = metrics.value.filter(
-          (m) => m.category !== category.toUpperCase()
-        )
+        const otherMetrics = metrics.value.filter((m) => m.category !== category.toUpperCase())
         metrics.value = [...otherMetrics, ...data.content]
       } else {
         // If no category was specified, replace the entire state

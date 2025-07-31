@@ -6,15 +6,28 @@
     <td class="px-6 py-4 whitespace-nowrap">{{ entry.toxicWasteKg }}</td>
     <td class="px-6 py-4 whitespace-nowrap text-gray-500">{{ entry.submittedByUsername }}</td>
     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-      <svg
-        class="h-5 w-5 text-gray-400 transform transition-transform duration-200"
-        :class="{ 'rotate-90': isExpanded }"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-      </svg>
+      <div class="flex items-center justify-end space-x-2">
+        <!-- Delete Button (Admin or own entry) -->
+        <button
+          v-if="userStore.user?.role === 'ADMIN' || userStore.user?.id === entry.submittedBy"
+          @click.stop="handleDelete"
+          class="inline-flex items-center px-2 py-1 border border-transparent text-xs leading-4 font-medium rounded text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors duration-200"
+          :disabled="wasteStore.loading"
+        >
+          {{ wasteStore.loading ? 'Deleting...' : 'Delete' }}
+        </button>
+
+        <!-- Expand/Collapse Arrow -->
+        <svg
+          class="h-5 w-5 text-gray-400 transform transition-transform duration-200"
+          :class="{ 'rotate-90': isExpanded }"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+      </div>
     </td>
   </tr>
   <tr v-if="isExpanded">
@@ -54,13 +67,32 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useUserStore } from '@/stores/user.store'
+import { useWasteStore } from '@/stores/waste.store'
 
-defineProps({
+const props = defineProps({
   entry: {
     type: Object,
     required: true,
   },
 })
 
+const userStore = useUserStore()
+const wasteStore = useWasteStore()
 const isExpanded = ref(false)
+
+const handleDelete = async () => {
+  const confirmDelete = confirm(
+    `Are you sure you want to delete the waste entry from ${props.entry.dataDate}?\n\nThis action cannot be undone.`,
+  )
+
+  if (confirmDelete) {
+    const success = await wasteStore.deleteWasteData(props.entry.id)
+    if (success) {
+      alert('Waste entry deleted successfully!')
+    } else {
+      alert('Failed to delete waste entry. Please try again.')
+    }
+  }
+}
 </script>

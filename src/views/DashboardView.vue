@@ -58,13 +58,15 @@
             <ul v-else class="divide-y divide-gray-200">
               <li
                 v-for="item in dashboardStore.recentActivity"
-                :key="`${item.type}-${item.id}`"
+                :key="item.id"
                 class="py-3"
               >
-                <p class="font-medium text-gray-800">New {{ item.type }}</p>
+                <p class="font-medium text-gray-800">
+                  {{ item.eventType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) }}
+                </p>
                 <span class="text-sm text-gray-500">
-                  Logged by {{ item.submittedByUsername || item.submittedBy }} on
-                  {{ new Date(item.date).toLocaleDateString() }}
+                  Logged by {{ item.username }} on
+                  {{ new Date(item.timestamp).toLocaleDateString() }}
                 </span>
               </li>
             </ul>
@@ -149,7 +151,7 @@ const chartOptions = ref({
 onMounted(() => {
   if (userStore.user?.role === 'ADMIN') {
     dashboardStore.getStats()
-    dashboardStore.getRecentActivity() // <-- Call the new action
+    dashboardStore.getActivityLog(0, 5) // Fetch the first 5 activities for the preview
   }
 })
 </script>

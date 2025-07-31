@@ -45,11 +45,14 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Submitted By
               </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!vehicleStore.entries.length">
-              <td colspan="5" class="text-center p-4">
+              <td colspan="6" class="text-center p-4">
                 No entries found for the selected criteria.
               </td>
             </tr>
@@ -59,6 +62,15 @@
               <td class="px-6 py-4">{{ entry.privateVehicleCount }}</td>
               <td class="px-6 py-4">{{ entry.zevCount }}</td>
               <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedBy }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button
+                  @click="handleDelete(entry)"
+                  class="text-red-600 hover:text-red-900"
+                  :disabled="vehicleStore.loading"
+                >
+                  Delete
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -216,6 +228,22 @@ async function handleSaveMetric(updatedMetric) {
   if (success) {
     closeEditModal()
     alert('Metric history updated successfully!')
+  }
+}
+
+// Add delete handler function
+const handleDelete = async (entry) => {
+  if (
+    confirm(
+      `Are you sure you want to delete the entry for ${entry.entryDate}? This action cannot be undone.`,
+    )
+  ) {
+    const success = await vehicleStore.deleteVehicleEntry(entry.id)
+    if (success) {
+      alert('Entry deleted successfully.')
+    } else {
+      alert('Failed to delete entry. Please check the console for errors.')
+    }
   }
 }
 

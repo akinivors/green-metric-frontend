@@ -88,6 +88,32 @@ export const useElectricityStore = defineStore('electricity', () => {
     }
   }
 
+  // Add the new deleteElectricityConsumption function
+  async function deleteElectricityConsumption(entryId) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await fetch(`http://localhost:8080/api/consumption/electricity/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete electricity consumption entry.')
+      }
+      // Refresh the entry list after successful deletion
+      await getEntries()
+      return true
+    } catch (e) {
+      error.value = e.message
+      console.error('Error deleting electricity consumption entry:', e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // --- ADDED THIS FUNCTION ---
   async function getMetrics() {
     // Delegate to the central metrics store
@@ -127,11 +153,12 @@ export const useElectricityStore = defineStore('electricity', () => {
     loading,
     error,
     getEntries,
+    submitLog,
+    deleteElectricityConsumption, // Export the new deleteElectricityConsumption function
+    getMetrics, // Expose the new function
     applyFilters,
     clearFilters,
     changePage,
     initializeFromUrl,
-    submitLog,
-    getMetrics, // Expose the new function
   }
 })

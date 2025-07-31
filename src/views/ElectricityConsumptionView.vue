@@ -54,11 +54,14 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Submitted By
               </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!electricityStore.entries.length">
-              <td colspan="4" class="text-center p-4">No entries found.</td>
+              <td colspan="5" class="text-center p-4">No entries found.</td>
             </tr>
             <tr v-for="entry in electricityStore.entries" :key="entry.id">
               <td class="px-6 py-4">{{ entry.periodStartDate }} to {{ entry.periodEndDate }}</td>
@@ -66,6 +69,15 @@
               <td class="px-6 py-4">{{ entry.consumptionKwh }}</td>
               <td class="px-6 py-4 text-sm text-gray-500">
                 {{ entry.submittedByUsername }}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button
+                  @click="handleDelete(entry)"
+                  class="text-red-600 hover:text-red-900"
+                  :disabled="electricityStore.loading"
+                >
+                  Delete
+                </button>
               </td>
             </tr>
           </tbody>
@@ -204,7 +216,7 @@ const logForm = reactive({
 
 // Add computed property to filter the correct metrics
 const electricityMetrics = computed(() => {
-  return metricsStore.metrics.filter(metric => metric.category === 'ENERGY_CLIMATE_CHANGE')
+  return metricsStore.metrics.filter((metric) => metric.category === 'ENERGY_CLIMATE_CHANGE')
 })
 
 // Using real API units from userStore (consistent with our architecture)
@@ -261,6 +273,22 @@ function openEditModal(metric) {
 function closeEditModal() {
   isEditModalOpen.value = false
   selectedMetric.value = null
+}
+
+// Add delete handler function
+const handleDelete = async (entry) => {
+  if (
+    confirm(
+      `Are you sure you want to delete the electricity entry for ${entry.unitName} (${entry.periodStartDate} to ${entry.periodEndDate})? This action cannot be undone.`,
+    )
+  ) {
+    const success = await electricityStore.deleteElectricityConsumption(entry.id)
+    if (success) {
+      alert('Entry deleted successfully.')
+    } else {
+      alert('Failed to delete entry. Please check the console for errors.')
+    }
+  }
 }
 
 async function handleSaveMetric(updatedMetric) {

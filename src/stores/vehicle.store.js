@@ -82,6 +82,32 @@ export const useVehicleStore = defineStore('vehicle', () => {
     }
   }
 
+  // Add the new deleteVehicleEntry function
+  async function deleteVehicleEntry(entryId) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await fetch(`http://localhost:8080/api/entries/vehicle/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete vehicle entry.')
+      }
+      // Refresh the entry list after successful deletion
+      await getEntries()
+      return true
+    } catch (e) {
+      error.value = e.message
+      console.error('Error deleting vehicle entry:', e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // --- URL and Filter Management ---
   function applyFilters() {
     pagination.page = 0 // Reset to the first page for a new filter
@@ -116,6 +142,7 @@ export const useVehicleStore = defineStore('vehicle', () => {
     error,
     getEntries,
     submitLog,
+    deleteVehicleEntry, // Export the new deleteVehicleEntry function
     applyFilters,
     clearFilters,
     changePage,

@@ -47,11 +47,14 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Treated Water (Liters)
               </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!waterStore.entries.length">
-              <td colspan="5" class="text-center p-4">No entries found.</td>
+              <td colspan="6" class="text-center p-4">No entries found.</td>
             </tr>
             <tr v-for="entry in waterStore.entries" :key="entry.id">
               <td class="px-6 py-4">{{ entry.periodStartDate }} to {{ entry.periodEndDate }}</td>
@@ -59,6 +62,15 @@
               <td class="px-6 py-4">{{ entry.consumptionTon }}</td>
               <td class="px-6 py-4">{{ entry.recycledWaterUsageLiters }}</td>
               <td class="px-6 py-4">{{ entry.treatedWaterConsumptionLiters }}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <button
+                  @click="handleDelete(entry)"
+                  class="text-red-600 hover:text-red-900"
+                  :disabled="waterStore.loading"
+                >
+                  Delete
+                </button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -224,6 +236,22 @@ const unitOptionsForFilter = computed(() => {
 const waterMetrics = computed(() => {
   return metricsStore.metrics.filter((metric) => metric.category === 'WATER')
 })
+
+// Add delete handler function
+const handleDelete = async (entry) => {
+  if (
+    confirm(
+      `Are you sure you want to delete the water consumption entry for ${entry.unitName} (${entry.periodStartDate} to ${entry.periodEndDate})? This action cannot be undone.`,
+    )
+  ) {
+    const success = await waterStore.deleteWaterConsumption(entry.id)
+    if (success) {
+      alert('Entry deleted successfully.')
+    } else {
+      alert('Failed to delete entry. Please check the console for errors.')
+    }
+  }
+}
 
 const handleLogSubmit = async () => {
   const selectedUnit = userStore.units.find((u) => u.id === Number(logForm.unitId))

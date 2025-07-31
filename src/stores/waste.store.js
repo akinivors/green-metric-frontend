@@ -72,6 +72,32 @@ export const useWasteStore = defineStore('waste', () => {
     }
   }
 
+  // Add the new deleteWasteData function
+  async function deleteWasteData(entryId) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await fetch(`http://localhost:8080/api/entries/waste/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${authStore.token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error('Failed to delete waste data entry.')
+      }
+      // Refresh the entry list after successful deletion
+      await getEntries()
+      return true
+    } catch (e) {
+      error.value = e.message
+      console.error('Error deleting waste data entry:', e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   // --- URL and Filter Management ---
   function applyFilters() {
     pagination.page = 0
@@ -105,10 +131,11 @@ export const useWasteStore = defineStore('waste', () => {
     loading,
     error,
     getEntries,
+    submitLog,
+    deleteWasteData, // Export the new deleteWasteData function
     applyFilters,
     clearFilters,
     changePage,
     initializeFromUrl,
-    submitLog,
   }
 })
