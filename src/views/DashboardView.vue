@@ -56,13 +56,14 @@
             <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Activity</h2>
             <div v-if="dashboardStore.loading">Loading activity...</div>
             <ul v-else class="divide-y divide-gray-200">
-              <li
-                v-for="item in dashboardStore.recentActivity"
-                :key="item.id"
-                class="py-3"
-              >
+              <li v-for="item in dashboardStore.recentActivity" :key="item.id" class="py-3">
                 <p class="font-medium text-gray-800">
-                  {{ item.eventType.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()) }}
+                  {{
+                    item.eventType
+                      .replace(/_/g, ' ')
+                      .toLowerCase()
+                      .replace(/\b\w/g, (l) => l.toUpperCase())
+                  }}
                 </p>
                 <span class="text-sm text-gray-500">
                   Logged by {{ item.username }} on

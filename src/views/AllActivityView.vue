@@ -1,6 +1,11 @@
 <template>
   <div class="space-y-8">
-    <h1 class="text-2xl font-semibold text-gray-800">System Activity Log</h1>
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-semibold text-gray-800">System Activity Log</h1>
+      <BaseButton @click="handleDownloadReport" :disabled="isDownloading">
+        {{ isDownloading ? 'Generating...' : 'Download Report' }}
+      </BaseButton>
+    </div>
 
     <div class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">All Entries</h2>
@@ -47,12 +52,62 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useDashboardStore } from '@/stores/dashboard.store'
+import { ref, onMounted } from 'vue'; // <-- Add ref
+import { useDashboardStore } from '@/stores/dashboard.store';
+import { useAuthStore } from '@/stores/auth.store'; // <-- Add this import
+import BaseButton from '@/components/BaseButton.vue'; // <-- Add this import
 
-const dashboardStore = useDashboardStore()
+const dashboardStore = useDashboardStore();
+const authStore = useAuthStore(); // <-- Initialize the auth store
+
+// AFTER: Add this ref for loading state
+const isDownloading = ref(false);
+
+// AFTER: Add this new function to handle the download
+const handleDownloadReport = async () => {
+  isDownloading.value = true;
+  try {
+    const response = await fetch('http://localhost:8080/api/reports/activity-log', {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${authStore.token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to download report. Please try again.');
+    }
+
+    // Get the blob data and the filename from headers
+    const blob = await response.blob();
+    const contentDisposition = response.headers.get('Content-Disposition');
+    let filename = 'activity_log.pdf'; // Default filename
+    if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch.length > 1) {
+            filename = filenameMatch[1];
+        }
+    }
+
+    // Create a temporary URL and trigger the download
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    console.error('Error downloading report:', error);
+    alert(error.message);
+  } finally {
+    isDownloading.value = false;
+  }
+};
 
 onMounted(() => {
-  dashboardStore.getActivityLog()
-})
+  dashboardStore.getActivityLog();
+});
 </script>
