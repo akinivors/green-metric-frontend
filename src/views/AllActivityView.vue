@@ -52,62 +52,61 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'; // <-- Add ref
-import { useDashboardStore } from '@/stores/dashboard.store';
-import { useAuthStore } from '@/stores/auth.store'; // <-- Add this import
-import BaseButton from '@/components/BaseButton.vue'; // <-- Add this import
+import { ref, onMounted } from 'vue' // <-- Add ref
+import { useDashboardStore } from '@/stores/dashboard.store'
+import { useAuthStore } from '@/stores/auth.store' // <-- Add this import
+import BaseButton from '@/components/BaseButton.vue' // <-- Add this import
 
-const dashboardStore = useDashboardStore();
-const authStore = useAuthStore(); // <-- Initialize the auth store
+const dashboardStore = useDashboardStore()
+const authStore = useAuthStore() // <-- Initialize the auth store
 
 // AFTER: Add this ref for loading state
-const isDownloading = ref(false);
+const isDownloading = ref(false)
 
 // AFTER: Add this new function to handle the download
 const handleDownloadReport = async () => {
-  isDownloading.value = true;
+  isDownloading.value = true
   try {
     const response = await fetch('http://localhost:8080/api/reports/activity-log', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${authStore.token}`,
       },
-    });
+    })
 
     if (!response.ok) {
-      throw new Error('Failed to download report. Please try again.');
+      throw new Error('Failed to download report. Please try again.')
     }
 
     // Get the blob data and the filename from headers
-    const blob = await response.blob();
-    const contentDisposition = response.headers.get('Content-Disposition');
-    let filename = 'activity_log.pdf'; // Default filename
+    const blob = await response.blob()
+    const contentDisposition = response.headers.get('Content-Disposition')
+    let filename = 'activity_log.pdf' // Default filename
     if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
-        if (filenameMatch.length > 1) {
-            filename = filenameMatch[1];
-        }
+      const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+      if (filenameMatch.length > 1) {
+        filename = filenameMatch[1]
+      }
     }
 
     // Create a temporary URL and trigger the download
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.URL.revokeObjectURL(url);
-
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
   } catch (error) {
-    console.error('Error downloading report:', error);
-    alert(error.message);
+    console.error('Error downloading report:', error)
+    alert(error.message)
   } finally {
-    isDownloading.value = false;
+    isDownloading.value = false
   }
-};
+}
 
 onMounted(() => {
-  dashboardStore.getActivityLog();
-});
+  dashboardStore.getActivityLog()
+})
 </script>
