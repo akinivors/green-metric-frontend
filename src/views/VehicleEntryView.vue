@@ -61,7 +61,7 @@
               <td class="px-6 py-4">{{ entry.publicTransportCount }}</td>
               <td class="px-6 py-4">{{ entry.privateVehicleCount }}</td>
               <td class="px-6 py-4">{{ entry.zevCount }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedBy }}</td>
+              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
                   @click="handleDelete(entry)"
