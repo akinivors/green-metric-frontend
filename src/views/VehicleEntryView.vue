@@ -11,15 +11,17 @@
           label="Start Date"
           type="date"
           v-model="vehicleStore.filters.startDate"
+          :error="filterErrors.date"
         />
         <BaseInput
           id="endDate"
           label="End Date"
           type="date"
           v-model="vehicleStore.filters.endDate"
+          :error="filterErrors.date"
         />
         <div class="flex space-x-2">
-          <BaseButton @click="vehicleStore.applyFilters" class="w-full">Apply Filters</BaseButton>
+          <BaseButton @click="applyFilters" class="w-full">Apply Filters</BaseButton>
           <BaseButton @click="vehicleStore.clearFilters" variant="secondary" class="w-full"
             >Clear</BaseButton
           >
@@ -41,6 +43,9 @@
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Private Vehicles
               </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Motorcycle
+              </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ZEVs</th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Submitted By
@@ -52,7 +57,7 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!vehicleStore.entries.length">
-              <td colspan="6" class="text-center p-4">
+              <td colspan="7" class="text-center p-4">
                 No entries found for the selected criteria.
               </td>
             </tr>
@@ -60,6 +65,7 @@
               <td class="px-6 py-4">{{ entry.entryDate }}</td>
               <td class="px-6 py-4">{{ entry.publicTransportCount }}</td>
               <td class="px-6 py-4">{{ entry.privateVehicleCount }}</td>
+              <td class="px-6 py-4">{{ entry.motorcycleCount }}</td>
               <td class="px-6 py-4">{{ entry.zevCount }}</td>
               <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -113,7 +119,7 @@
       </div>
 
       <form class="space-y-6" @submit.prevent="handleLogSubmit">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 items-end">
           <BaseInput
             id="newEntryDate"
             label="Entry Date"
@@ -133,6 +139,13 @@
             label="Private Vehicle Count"
             type="number"
             v-model.number="logForm.privateVehicleCount"
+            required
+          />
+          <BaseInput
+            id="newMotorcycle"
+            label="Motorcycle Count"
+            type="number"
+            v-model.number="logForm.motorcycleCount"
             required
           />
           <BaseInput
@@ -203,7 +216,22 @@ const logForm = reactive({
   entryDate: new Date().toISOString().substring(0, 10),
   publicTransportCount: 0,
   privateVehicleCount: 0,
+  motorcycleCount: 0,
   zevCount: 0,
+})
+
+// NEW: Add state for FILTER validation errors
+const filterErrors = ref({
+  date: '',
+})
+
+// NEW: Watch for changes on the FILTER date fields
+watch([() => vehicleStore.filters.startDate, () => vehicleStore.filters.endDate], ([newStartDate, newEndDate]) => {
+  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+    filterErrors.value.date = 'End date cannot be before start date.'
+  } else {
+    filterErrors.value.date = ''
+  }
 })
 
 // Modal state for editing metrics
@@ -259,6 +287,7 @@ const handleLogSubmit = async () => {
     entryDate: logForm.entryDate,
     publicTransportCount: logForm.publicTransportCount,
     privateVehicleCount: logForm.privateVehicleCount,
+    motorcycleCount: logForm.motorcycleCount,
     zevCount: logForm.zevCount,
   })
 
@@ -266,12 +295,23 @@ const handleLogSubmit = async () => {
     // Reset form after successful submission
     logForm.publicTransportCount = 0
     logForm.privateVehicleCount = 0
+    logForm.motorcycleCount = 0
     logForm.zevCount = 0
     logForm.entryDate = new Date().toISOString().substring(0, 10)
     notificationService.success('Entry submitted successfully!')
   } else {
     notificationService.error(vehicleStore.error || 'Failed to submit entry. Please try again.')
   }
+}
+
+// NEW: Local wrapper for applyFilters with validation
+const applyFilters = () => {
+  // NEW: Add check for filter error before fetching data
+  if (filterErrors.value.date) {
+    notificationService.error('Please correct the filter date range.')
+    return
+  }
+  vehicleStore.applyFilters()
 }
 
 // Watch the URL's query. When it changes, tell the store to initialize itself from that query.

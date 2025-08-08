@@ -13,10 +13,11 @@
           label="Start Date"
           type="date"
           v-model="wasteStore.filters.startDate"
+          :error="filterErrors.date"
         />
-        <BaseInput id="endDate" label="End Date" type="date" v-model="wasteStore.filters.endDate" />
+        <BaseInput id="endDate" label="End Date" type="date" v-model="wasteStore.filters.endDate" :error="filterErrors.date" />
         <div class="flex space-x-2">
-          <BaseButton @click="wasteStore.applyFilters" class="w-full"> Apply Filters </BaseButton>
+          <BaseButton @click="applyFilters" class="w-full"> Apply Filters </BaseButton>
           <BaseButton @click="wasteStore.clearFilters" variant="secondary" class="w-full">
             Clear
           </BaseButton>
@@ -51,25 +52,14 @@
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-if="!wasteStore.entries.length">
-              <td colspan="6" class="text-center p-4">No entries found.</td>
-            </tr>
-            <tr v-for="entry in wasteStore.entries" :key="entry.id">
-              <td class="px-6 py-4">{{ entry.dataDate }}</td>
-              <td class="px-6 py-4">{{ entry.organicProductionKg }}</td>
-              <td class="px-6 py-4">{{ entry.inorganicRecycledKg }}</td>
-              <td class="px-6 py-4">{{ entry.toxicWasteKg }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  @click="handleDelete(entry)"
-                  class="text-red-600 hover:text-red-900"
-                  :disabled="wasteStore.loading"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
+            <template v-if="!wasteStore.entries.length">
+              <tr>
+                <td colspan="6" class="text-center p-4">No entries found.</td>
+              </tr>
+            </template>
+            <template v-for="entry in wasteStore.entries" :key="entry.id">
+              <WasteDataRow :entry="entry" @delete="handleDelete" />
+            </template>
           </tbody>
         </table>
 
@@ -238,6 +228,7 @@ import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import WasteDataRow from '@/components/WasteDataRow.vue'
 import notificationService from '@/services/notificationService'
 import { useModal } from '@/services/modalService'
 
@@ -266,6 +257,20 @@ const logForm = reactive({
   sewageDisposalLiters: 0,
 })
 
+// NEW: Add state for FILTER validation errors
+const filterErrors = ref({
+  date: '',
+})
+
+// NEW: Watch for changes on the FILTER date fields
+watch([() => wasteStore.filters.startDate, () => wasteStore.filters.endDate], ([newStartDate, newEndDate]) => {
+  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+    filterErrors.value.date = 'End date cannot be before start date.'
+  } else {
+    filterErrors.value.date = ''
+  }
+})
+
 const handleLogSubmit = async () => {
   const success = await wasteStore.submitLog(logForm)
 
@@ -285,6 +290,16 @@ const handleLogSubmit = async () => {
       sewageDisposalLiters: 0,
     })
   }
+}
+
+// NEW: Local wrapper for applyFilters with validation
+const applyFilters = () => {
+  // NEW: Add check for filter error before fetching data
+  if (filterErrors.value.date) {
+    notificationService.error('Please correct the filter date range.')
+    return
+  }
+  wasteStore.applyFilters()
 }
 
 const handleDelete = async (entry) => {

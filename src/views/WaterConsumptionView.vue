@@ -11,8 +11,9 @@
           label="Start Date"
           type="date"
           v-model="waterStore.filters.startDate"
+          :error="filterErrors.date"
         />
-        <BaseInput id="endDate" label="End Date" type="date" v-model="waterStore.filters.endDate" />
+        <BaseInput id="endDate" label="End Date" type="date" v-model="waterStore.filters.endDate" :error="filterErrors.date" />
         <BaseSelect
           v-if="userStore.user?.role === 'ADMIN'"
           id="unitFilter"
@@ -21,7 +22,7 @@
           :options="unitOptionsForFilter"
         />
         <div class="flex space-x-2">
-          <BaseButton @click="waterStore.applyFilters" class="w-full">Apply</BaseButton>
+          <BaseButton @click="applyFilters" class="w-full">Apply</BaseButton>
           <BaseButton @click="waterStore.clearFilters" variant="secondary" class="w-full"
             >Clear</BaseButton
           >
@@ -48,13 +49,16 @@
                 Treated Water (Liters)
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                Submitted By
+              </th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!waterStore.entries.length">
-              <td colspan="6" class="text-center p-4">No entries found.</td>
+              <td colspan="7" class="text-center p-4">No entries found.</td>
             </tr>
             <tr v-for="entry in waterStore.entries" :key="entry.id">
               <td class="px-6 py-4">{{ entry.periodStartDate }} to {{ entry.periodEndDate }}</td>
@@ -62,6 +66,7 @@
               <td class="px-6 py-4">{{ entry.consumptionTon }}</td>
               <td class="px-6 py-4">{{ entry.recycledWaterUsageLiters }}</td>
               <td class="px-6 py-4">{{ entry.treatedWaterConsumptionLiters }}</td>
+              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
               <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                 <button
                   @click="handleDelete(entry)"
@@ -108,6 +113,7 @@
             label="Period Start Date"
             type="date"
             v-model="logForm.periodStartDate"
+            :error="errors.date"
             required
           />
           <BaseInput
@@ -115,6 +121,7 @@
             label="Period End Date"
             type="date"
             v-model="logForm.periodEndDate"
+            :error="errors.date"
             required
           />
           <BaseSelect
@@ -222,6 +229,37 @@ const logForm = reactive({
   treatedWaterConsumptionLiters: 0,
 })
 
+// NEW: Add state for date validation errors
+const errors = ref({
+  date: '',
+})
+
+// NEW: Watch for changes on both date fields
+watch(
+  [() => logForm.periodStartDate, () => logForm.periodEndDate],
+  ([newStartDate, newEndDate]) => {
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      errors.value.date = 'End date cannot be before the start date.'
+    } else {
+      errors.value.date = ''
+    }
+  },
+)
+
+// NEW: Add state for FILTER validation errors
+const filterErrors = ref({
+  date: '',
+})
+
+// NEW: Watch for changes on the FILTER date fields
+watch([() => waterStore.filters.startDate, () => waterStore.filters.endDate], ([newStartDate, newEndDate]) => {
+  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+    filterErrors.value.date = 'End date cannot be before start date.'
+  } else {
+    filterErrors.value.date = ''
+  }
+})
+
 // Using real API units from userStore (consistent with our architecture)
 const unitOptions = computed(() => {
   if (!userStore.units || userStore.units.length === 0) {
@@ -263,6 +301,12 @@ const handleDelete = async (entry) => {
 }
 
 const handleLogSubmit = async () => {
+  // NEW: Add check for date error before submitting
+  if (errors.value.date) {
+    notificationService.error('Please correct the date range before submitting.')
+    return
+  }
+
   const selectedUnit = userStore.units.find((u) => u.id === Number(logForm.unitId))
   const success = await waterStore.submitLog({
     ...logForm,
@@ -282,6 +326,16 @@ const handleLogSubmit = async () => {
       treatedWaterConsumptionLiters: 0,
     })
   }
+}
+
+// NEW: Local wrapper for applyFilters with validation
+const applyFilters = () => {
+  // NEW: Add check for filter error before fetching data
+  if (filterErrors.value.date) {
+    notificationService.error('Please correct the filter date range.')
+    return
+  }
+  waterStore.applyFilters()
 }
 
 // Edit Metric Modal Logic

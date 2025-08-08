@@ -13,12 +13,14 @@
           label="Start Date"
           type="date"
           v-model="electricityStore.filters.startDate"
+          :error="filterErrors.date"
         />
         <BaseInput
           id="endDate"
           label="End Date"
           type="date"
           v-model="electricityStore.filters.endDate"
+          :error="filterErrors.date"
         />
         <BaseSelect
           v-if="userStore.user?.role === 'ADMIN'"
@@ -28,7 +30,7 @@
           :options="unitOptionsForFilter"
         />
         <div class="flex space-x-2">
-          <BaseButton @click="electricityStore.applyFilters" class="w-full"> Apply </BaseButton>
+          <BaseButton @click="applyFilters" class="w-full"> Apply </BaseButton>
           <BaseButton @click="electricityStore.clearFilters" variant="secondary" class="w-full">
             Clear
           </BaseButton>
@@ -123,6 +125,7 @@
             label="Period Start Date"
             type="date"
             v-model="logForm.periodStartDate"
+            :error="errors.date"
             required
           />
           <BaseInput
@@ -130,6 +133,7 @@
             label="Period End Date"
             type="date"
             v-model="logForm.periodEndDate"
+            :error="errors.date"
             required
           />
           <BaseSelect
@@ -217,6 +221,37 @@ const logForm = reactive({
   consumptionKwh: 0,
 })
 
+// NEW: Add state for date validation errors
+const errors = ref({
+  date: '',
+})
+
+// NEW: Watch for changes on both date fields
+watch(
+  [() => logForm.periodStartDate, () => logForm.periodEndDate],
+  ([newStartDate, newEndDate]) => {
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      errors.value.date = 'End date cannot be before the start date.'
+    } else {
+      errors.value.date = ''
+    }
+  },
+)
+
+// NEW: Add state for FILTER validation errors
+const filterErrors = ref({
+  date: '',
+})
+
+// NEW: Watch for changes on the FILTER date fields
+watch([() => electricityStore.filters.startDate, () => electricityStore.filters.endDate], ([newStartDate, newEndDate]) => {
+  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+    filterErrors.value.date = 'End date cannot be before start date.'
+  } else {
+    filterErrors.value.date = ''
+  }
+})
+
 // Add computed property to filter the correct metrics
 const electricityMetrics = computed(() => {
   return metricsStore.metrics.filter((metric) => metric.category === 'ENERGY_CLIMATE_CHANGE')
@@ -245,6 +280,12 @@ const unitOptionsForFilter = computed(() => {
 })
 
 const handleLogSubmit = async () => {
+  // NEW: Add check for date error before submitting
+  if (errors.value.date) {
+    notificationService.error('Please correct the date range before submitting.')
+    return
+  }
+
   const selectedUnit = userStore.units.find((u) => u.id === Number(logForm.unitId))
   const success = await electricityStore.submitLog({
     ...logForm,
@@ -262,6 +303,16 @@ const handleLogSubmit = async () => {
       consumptionKwh: 0,
     })
   }
+}
+
+// NEW: Local wrapper for applyFilters with validation
+const applyFilters = () => {
+  // NEW: Add check for filter error before fetching data
+  if (filterErrors.value.date) {
+    notificationService.error('Please correct the filter date range.')
+    return
+  }
+  electricityStore.applyFilters()
 }
 
 // Edit Metric Modal Logic
