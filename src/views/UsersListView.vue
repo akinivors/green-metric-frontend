@@ -80,22 +80,26 @@
 import { onMounted } from 'vue'
 import { useUserStore } from '@/stores/user.store'
 import BaseButton from '@/components/BaseButton.vue'
+import notificationService from '@/services/notificationService'
+import { useModal } from '@/services/modalService'
 
 const userStore = useUserStore()
+const { confirm } = useModal()
 
 // Add delete handler function
 const handleDelete = async (user) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the user "${user.fullName}"? This action cannot be undone.`,
-    )
-  ) {
+  const confirmed = await confirm({
+    title: 'Delete User',
+    message: `Are you sure you want to delete the user '${user.username}'? This action cannot be undone.`,
+    confirmButtonText: 'Delete',
+  })
+
+  if (confirmed) {
     const success = await userStore.deleteUser(user.id)
     if (success) {
-      alert('User deleted successfully.')
+      notificationService.success('User deleted successfully.')
     } else {
-      // The error will be displayed automatically by the component's error div
-      alert('Failed to delete user.')
+      notificationService.error(userStore.error || 'Failed to delete user.')
     }
   }
 }

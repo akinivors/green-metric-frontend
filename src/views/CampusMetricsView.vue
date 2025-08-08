@@ -63,6 +63,7 @@ import { useMetricsStore } from '@/stores/metrics.store'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import notificationService from '@/services/notificationService'
 
 const metricsStore = useMetricsStore()
 
@@ -132,7 +133,9 @@ async function handleSaveMetric(updatedMetric) {
     closeEditModal()
     // After saving, refresh the view with the current filters
     applyFilters()
-    alert('Metric history updated successfully!')
+    notificationService.success('Metric history updated successfully!')
+  } else {
+    notificationService.error(metricsStore.error || 'Failed to update metric.')
   }
 }
 

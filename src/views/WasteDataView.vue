@@ -238,10 +238,13 @@ import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import notificationService from '@/services/notificationService'
+import { useModal } from '@/services/modalService'
 
 const wasteStore = useWasteStore()
 const userStore = useUserStore()
 const metricsStore = useMetricsStore()
+const { confirm } = useModal()
 const route = useRoute()
 
 // Filter metrics for waste category
@@ -267,7 +270,7 @@ const handleLogSubmit = async () => {
   const success = await wasteStore.submitLog(logForm)
 
   if (success) {
-    alert('Waste data logged successfully!')
+    notificationService.success('Waste data logged successfully!')
     // Reset form
     Object.assign(logForm, {
       dataDate: '',
@@ -285,16 +288,18 @@ const handleLogSubmit = async () => {
 }
 
 const handleDelete = async (entry) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the waste data entry for ${entry.dataDate}? This action cannot be undone.`,
-    )
-  ) {
+  const confirmed = await confirm({
+    title: 'Delete Waste Data Entry',
+    message: `Are you sure you want to delete the entry for ${entry.dataDate}?`,
+    confirmButtonText: 'Delete',
+  })
+
+  if (confirmed) {
     const success = await wasteStore.deleteWasteData(entry.id)
     if (success) {
-      alert('Entry deleted successfully.')
+      notificationService.success('Entry deleted successfully.')
     } else {
-      alert('Failed to delete entry. Please check the console for errors.')
+      notificationService.error(wasteStore.error || 'Failed to delete entry.')
     }
   }
 }
@@ -317,7 +322,7 @@ async function handleSaveMetric(updatedMetric) {
   const success = await metricsStore.createMetric(updatedMetric)
   if (success) {
     closeEditModal()
-    alert('Metric history updated successfully!')
+    notificationService.success('Metric history updated successfully!')
     // Refresh the waste metrics to show the updated data
     await metricsStore.getMetrics('WASTE')
   }

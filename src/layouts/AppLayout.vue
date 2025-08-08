@@ -207,6 +207,15 @@
       </main>
     </div>
     <ChangePasswordModal v-if="userStore.user && userStore.user.isTemporaryPassword" />
+    <ConfirmationModal
+      :show="showConfirmationModal"
+      :title="confirmationTitle"
+      :message="confirmationMessage"
+      :confirm-button-text="confirmButtonText"
+      :cancel-button-text="cancelButtonText"
+      @confirm="handleConfirm"
+      @cancel="handleCancel"
+    />
   </div>
 </template>
 
@@ -216,10 +225,22 @@ import { RouterView, RouterLink, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useUserStore } from '@/stores/user.store'
 import ChangePasswordModal from '@/components/ChangePasswordModal.vue'
+import ConfirmationModal from '@/components/ConfirmationModal.vue'
+import { useModal } from '@/services/modalService'
 
 const authStore = useAuthStore()
 const userStore = useUserStore()
 const router = useRouter()
+
+const {
+  show: showConfirmationModal,
+  title: confirmationTitle,
+  message: confirmationMessage,
+  confirmButtonText,
+  cancelButtonText,
+  handleConfirm,
+  handleCancel,
+} = useModal()
 
 const isSidebarOpen = ref(true) // Sidebar is open by default
 const isUserMenuOpen = ref(false) // State for the new user menu

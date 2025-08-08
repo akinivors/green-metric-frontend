@@ -183,14 +183,17 @@ import { ref, reactive, onMounted, watch, computed } from 'vue' // Add computed
 import { useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useVehicleStore } from '@/stores/vehicle.store'
-import { useMetricsStore } from '@/stores/metrics.store' // <-- NEW
+import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import notificationService from '@/services/notificationService'
+import { useModal } from '@/services/modalService'
 
 const userStore = useUserStore()
 const vehicleStore = useVehicleStore()
-const metricsStore = useMetricsStore() // <-- NEW
+const metricsStore = useMetricsStore()
+const { confirm } = useModal()
 const route = useRoute()
 
 // The component no longer holds its own filter state. It just tells the store when to act.
@@ -227,22 +230,24 @@ async function handleSaveMetric(updatedMetric) {
   const success = await metricsStore.createMetric(updatedMetric)
   if (success) {
     closeEditModal()
-    alert('Metric history updated successfully!')
+    notificationService.success('Metric history updated successfully!')
   }
 }
 
 // Add delete handler function
 const handleDelete = async (entry) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the entry for ${entry.entryDate}? This action cannot be undone.`,
-    )
-  ) {
+  const confirmed = await confirm({
+    title: 'Delete Vehicle Entry',
+    message: `Are you sure you want to delete the entry for ${entry.entryDate}?`,
+    confirmButtonText: 'Delete',
+  })
+
+  if (confirmed) {
     const success = await vehicleStore.deleteVehicleEntry(entry.id)
     if (success) {
-      alert('Entry deleted successfully.')
+      notificationService.success('Entry deleted successfully.')
     } else {
-      alert('Failed to delete entry. Please check the console for errors.')
+      notificationService.error(vehicleStore.error || 'Failed to delete entry.')
     }
   }
 }
@@ -263,9 +268,9 @@ const handleLogSubmit = async () => {
     logForm.privateVehicleCount = 0
     logForm.zevCount = 0
     logForm.entryDate = new Date().toISOString().substring(0, 10)
-    alert('Entry submitted successfully!')
+    notificationService.success('Entry submitted successfully!')
   } else {
-    alert('Failed to submit entry. Please try again.')
+    notificationService.error(vehicleStore.error || 'Failed to submit entry. Please try again.')
   }
 }
 

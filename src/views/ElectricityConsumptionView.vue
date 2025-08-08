@@ -199,11 +199,14 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import notificationService from '@/services/notificationService'
+import { useModal } from '@/services/modalService'
 
 const electricityStore = useElectricityStore()
 const userStore = useUserStore()
 const unitsStore = useUnitsStore()
 const metricsStore = useMetricsStore()
+const { confirm } = useModal()
 const route = useRoute()
 
 // Form for logging new consumption
@@ -250,7 +253,7 @@ const handleLogSubmit = async () => {
   })
 
   if (success) {
-    alert('Electricity consumption logged successfully!')
+    notificationService.success('Electricity consumption logged successfully!')
     // Reset form
     Object.assign(logForm, {
       periodStartDate: '',
@@ -277,16 +280,18 @@ function closeEditModal() {
 
 // Add delete handler function
 const handleDelete = async (entry) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the electricity entry for ${entry.unitName} (${entry.periodStartDate} to ${entry.periodEndDate})? This action cannot be undone.`,
-    )
-  ) {
+  const confirmed = await confirm({
+    title: 'Delete Electricity Consumption Log',
+    message: `Are you sure you want to delete the log for period ${entry.periodStartDate} to ${entry.periodEndDate}?`,
+    confirmButtonText: 'Delete',
+  })
+
+  if (confirmed) {
     const success = await electricityStore.deleteElectricityConsumption(entry.id)
     if (success) {
-      alert('Entry deleted successfully.')
+      notificationService.success('Entry deleted successfully.')
     } else {
-      alert('Failed to delete entry. Please check the console for errors.')
+      notificationService.error(electricityStore.error || 'Failed to delete entry.')
     }
   }
 }
@@ -295,7 +300,7 @@ async function handleSaveMetric(updatedMetric) {
   const success = await metricsStore.createMetric(updatedMetric)
   if (success) {
     closeEditModal()
-    alert('Metric history updated successfully!')
+    notificationService.success('Metric history updated successfully!')
   }
 }
 

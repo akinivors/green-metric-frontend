@@ -56,9 +56,11 @@ import { ref, onMounted } from 'vue' // <-- Add ref
 import { useDashboardStore } from '@/stores/dashboard.store'
 import { useAuthStore } from '@/stores/auth.store' // <-- Add this import
 import BaseButton from '@/components/BaseButton.vue' // <-- Add this import
+import { useToast } from 'vue-toastification' // <-- Add this import
 
 const dashboardStore = useDashboardStore()
 const authStore = useAuthStore() // <-- Initialize the auth store
+const toast = useToast() // <-- Add this line
 
 // AFTER: Add this ref for loading state
 const isDownloading = ref(false)
@@ -100,7 +102,9 @@ const handleDownloadReport = async () => {
     window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Error downloading report:', error)
-    alert(error.message)
+    // OLD: alert(error.message)
+    // NEW:
+    toast.error(error.message)
   } finally {
     isDownloading.value = false
   }

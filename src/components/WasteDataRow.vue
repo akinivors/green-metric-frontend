@@ -69,6 +69,8 @@
 import { ref } from 'vue'
 import { useUserStore } from '@/stores/user.store'
 import { useWasteStore } from '@/stores/waste.store'
+import notificationService from '@/services/notificationService'
+import { useModal } from '@/services/modalService'
 
 const props = defineProps({
   entry: {
@@ -80,18 +82,21 @@ const props = defineProps({
 const userStore = useUserStore()
 const wasteStore = useWasteStore()
 const isExpanded = ref(false)
+const { confirm } = useModal()
 
 const handleDelete = async () => {
-  const confirmDelete = confirm(
-    `Are you sure you want to delete the waste entry from ${props.entry.dataDate}?\n\nThis action cannot be undone.`,
-  )
+  const confirmed = await confirm({
+    title: 'Delete Waste Entry',
+    message: `Are you sure you want to delete the waste entry from ${props.entry.dataDate}? This action cannot be undone.`,
+    confirmButtonText: 'Delete',
+  })
 
-  if (confirmDelete) {
+  if (confirmed) {
     const success = await wasteStore.deleteWasteData(props.entry.id)
     if (success) {
-      alert('Waste entry deleted successfully!')
+      notificationService.success('Waste entry deleted successfully!')
     } else {
-      alert('Failed to delete waste entry. Please try again.')
+      notificationService.error('Failed to delete waste entry. Please try again.')
     }
   }
 }

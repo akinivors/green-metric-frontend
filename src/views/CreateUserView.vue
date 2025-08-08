@@ -20,6 +20,7 @@
             type="text"
             v-model="form.fullName"
             :disabled="userStore.loading"
+            :error="errors.fullName"
             required
           />
           <BaseInput
@@ -28,6 +29,7 @@
             type="text"
             v-model="form.username"
             :disabled="userStore.loading"
+            :error="errors.username"
             required
           />
         </div>
@@ -38,6 +40,7 @@
             type="text"
             v-model="form.password"
             :disabled="userStore.loading"
+            :error="errors.password"
             required
             help="The user will be required to change this on their first login."
           />
@@ -71,12 +74,13 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, computed } from 'vue'
+import { reactive, onMounted, computed, ref, watch } from 'vue' // Import ref and watch
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
+import notificationService from '@/services/notificationService'
 
 const userStore = useUserStore()
 const router = useRouter()
@@ -88,6 +92,49 @@ const form = reactive({
   role: '',
   unitId: '',
 })
+
+// NEW: Add state for validation errors
+const errors = ref({
+  username: '',
+  fullName: '',
+  password: '',
+})
+
+// NEW: Watch for changes on the username field
+watch(
+  () => form.username,
+  (value) => {
+    if (value.length > 0 && value.length < 3) {
+      errors.value.username = 'Username must be at least 3 characters long.'
+    } else {
+      errors.value.username = ''
+    }
+  },
+)
+
+// NEW: Watch for changes on the fullName field
+watch(
+  () => form.fullName,
+  (value) => {
+    if (value.length > 0 && value.length < 2) {
+      errors.value.fullName = 'Full Name must be at least 2 characters long.'
+    } else {
+      errors.value.fullName = ''
+    }
+  },
+)
+
+// NEW: Watch for changes on the password field
+watch(
+  () => form.password,
+  (value) => {
+    if (value.length > 0 && value.length < 8) {
+      errors.value.password = 'Password must be at least 8 characters long.'
+    } else {
+      errors.value.password = ''
+    }
+  },
+)
 
 const roleOptions = [
   { value: 'ADMIN', label: 'Administrator' },
@@ -108,15 +155,20 @@ onMounted(() => {
 })
 
 const handleCreateUser = async () => {
-  // Basic validation
+  // Check for client-side errors before submitting
+  if (errors.value.username || errors.value.fullName || errors.value.password) {
+    userStore.error = 'Please correct the errors before submitting.'
+    return
+  }
+
   if (!form.username || !form.fullName || !form.password || !form.role || !form.unitId) {
     userStore.error = 'All fields are required.'
     return
   }
   const success = await userStore.createUser(form)
   if (success) {
-    alert('User created successfully!')
-    router.push('/users') // Redirect to the user list page
+    notificationService.success('User created successfully!')
+    router.push('/users')
   }
 }
 </script>

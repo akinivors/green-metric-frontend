@@ -197,28 +197,40 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import notificationService from '@/services/notificationService'
+import { useModal } from '@/services/modalService'
 
-const userStore = useUserStore()
 const waterStore = useWaterStore()
-const metricsStore = useMetricsStore()
+const userStore = useUserStore()
 const unitsStore = useUnitsStore()
+const metricsStore = useMetricsStore()
+const { confirm } = useModal()
 const route = useRoute()
 
-const logForm = reactive({
-  periodStartDate: '', // Was period_start_date
-  periodEndDate: '', // Was period_end_date
-  unitId: '',
-  consumptionTon: 0, // Was consumption_ton
-  recycledWaterUsageLiters: 0, // Was recycled_water_usage_liters
-  treatedWaterConsumptionLiters: 0, // Was treated_water_consumption_liters
+// Filter metrics for water category
+const waterMetrics = computed(() => {
+  return metricsStore.metrics.filter((metric) => metric.category === 'WATER')
 })
 
-// This uses the real API units from userStore
+// Form for logging new water consumption
+const logForm = reactive({
+  periodStartDate: '',
+  periodEndDate: '',
+  unitId: '',
+  consumptionTon: 0,
+  recycledWaterUsageLiters: 0,
+  treatedWaterConsumptionLiters: 0,
+})
+
+// Using real API units from userStore (consistent with our architecture)
 const unitOptions = computed(() => {
   if (!userStore.units || userStore.units.length === 0) {
     return [{ value: '', label: 'Loading...' }]
   }
-  return userStore.units.map((unit) => ({ value: unit.id, label: unit.name }))
+  return userStore.units.map((unit) => ({
+    value: unit.id,
+    label: unit.name,
+  }))
 })
 
 // Admin unit filter options
@@ -232,34 +244,35 @@ const unitOptionsForFilter = computed(() => {
   ]
 })
 
-// Filter metrics for water category
-const waterMetrics = computed(() => {
-  return metricsStore.metrics.filter((metric) => metric.category === 'WATER')
-})
-
 // Add delete handler function
 const handleDelete = async (entry) => {
-  if (
-    confirm(
-      `Are you sure you want to delete the water consumption entry for ${entry.unitName} (${entry.periodStartDate} to ${entry.periodEndDate})? This action cannot be undone.`,
-    )
-  ) {
+  const confirmed = await confirm({
+    title: 'Delete Water Consumption Log',
+    message: `Are you sure you want to delete the log for period ${entry.periodStartDate} to ${entry.periodEndDate}?`,
+    confirmButtonText: 'Delete',
+  })
+
+  if (confirmed) {
     const success = await waterStore.deleteWaterConsumption(entry.id)
     if (success) {
-      alert('Entry deleted successfully.')
+      notificationService.success('Entry deleted successfully.')
     } else {
-      alert('Failed to delete entry. Please check the console for errors.')
+      notificationService.error(waterStore.error || 'Failed to delete entry.')
     }
   }
 }
 
 const handleLogSubmit = async () => {
   const selectedUnit = userStore.units.find((u) => u.id === Number(logForm.unitId))
-  // No change needed here, the entire logForm is sent correctly now
-  const success = await waterStore.submitLog({ ...logForm, unitName: selectedUnit?.name })
+  const success = await waterStore.submitLog({
+    ...logForm,
+    unitId: Number(logForm.unitId),
+    unitName: selectedUnit?.name,
+  })
+
   if (success) {
-    alert('Water consumption logged successfully!')
-    // Also update the reset object to use camelCase
+    notificationService.success('Water consumption logged successfully!')
+    // Reset form
     Object.assign(logForm, {
       periodStartDate: '',
       periodEndDate: '',
@@ -271,9 +284,29 @@ const handleLogSubmit = async () => {
   }
 }
 
-const { isEditModalOpen, selectedMetric, openEditModal, closeEditModal, handleSaveMetric } =
-  useMetricEditing(metricsStore)
+// Edit Metric Modal Logic
+const isEditModalOpen = ref(false)
+const selectedMetric = ref(null)
 
+function openEditModal(metric) {
+  selectedMetric.value = metric
+  isEditModalOpen.value = true
+}
+
+function closeEditModal() {
+  isEditModalOpen.value = false
+  selectedMetric.value = null
+}
+
+async function handleSaveMetric(updatedMetric) {
+  const success = await metricsStore.createMetric(updatedMetric)
+  if (success) {
+    closeEditModal()
+    notificationService.success('Metric history updated successfully!')
+  }
+}
+
+// Watch the URL to drive the page state
 watch(
   () => route.query,
   (newQuery) => {
@@ -288,38 +321,15 @@ onMounted(() => {
     logForm.unitId = userStore.user.unitId
   }
 
-  userStore.fetchUnits() // Fetch real units from API
+  // Fetch real units from API (consistent with our architecture)
+  userStore.fetchUnits()
 
   // Fetch units for admin filtering
   unitsStore.fetchUnits()
 
   if (userStore.user?.role === 'ADMIN') {
-    metricsStore.getMetrics('WATER')
+    // Fetch only the metrics for this page's category
+    metricsStore.getMetrics({ category: 'WATER' })
   }
 })
-
-// Extracted modal logic into a reusable composable for cleanliness
-function useMetricEditing(store) {
-  const isEditModalOpen = ref(false)
-  const selectedMetric = ref(null)
-
-  function openEditModal(metric) {
-    selectedMetric.value = metric
-    isEditModalOpen.value = true
-  }
-
-  function closeEditModal() {
-    isEditModalOpen.value = false
-    selectedMetric.value = null
-  }
-
-  async function handleSaveMetric(updatedMetric) {
-    const success = await store.createMetric(updatedMetric)
-    if (success) {
-      closeEditModal()
-      alert('Metric history updated successfully!')
-    }
-  }
-  return { isEditModalOpen, selectedMetric, openEditModal, closeEditModal, handleSaveMetric }
-}
 </script>

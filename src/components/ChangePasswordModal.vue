@@ -25,6 +25,7 @@
           type="password"
           v-model="newPassword"
           :disabled="userStore.loading"
+          :error="errors.newPassword"
         />
         <BaseInput
           id="confirmPassword"
@@ -32,6 +33,7 @@
           type="password"
           v-model="confirmPassword"
           :disabled="userStore.loading"
+          :error="errors.confirmPassword"
         />
         <div>
           <BaseButton type="submit" class="w-full" :disabled="userStore.loading">
@@ -44,12 +46,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue' // Import watch
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user.store'
 import { useAuthStore } from '@/stores/auth.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
+import notificationService from '@/services/notificationService'
 
 const userStore = useUserStore()
 const authStore = useAuthStore()
@@ -60,23 +63,44 @@ const newPassword = ref('')
 const confirmPassword = ref('')
 const clientError = ref(null)
 
+// NEW: Add state for validation errors
+const errors = ref({
+  newPassword: '',
+  confirmPassword: '',
+})
+
+// NEW: Watch for changes on the newPassword field
+watch(newPassword, (value) => {
+  if (value.length > 0 && value.length < 8) {
+    errors.value.newPassword = 'Password must be at least 8 characters long.'
+  } else {
+    errors.value.newPassword = ''
+  }
+})
+
+// NEW: Watch for changes on the confirmPassword field
+watch(confirmPassword, (value) => {
+  if (value && value !== newPassword.value) {
+    errors.value.confirmPassword = 'Passwords do not match.'
+  } else {
+    errors.value.confirmPassword = ''
+  }
+})
+
 const handleChangePassword = async () => {
   clientError.value = null
-  if (newPassword.value !== confirmPassword.value) {
-    clientError.value = 'New passwords do not match.'
-    return
-  }
-  if (newPassword.value.length < 8) {
-    clientError.value = 'New password must be at least 8 characters long.'
+  // Check our new validation state before submitting
+  if (errors.value.newPassword || errors.value.confirmPassword) {
+    clientError.value = 'Please correct the errors before submitting.'
     return
   }
 
+  // The rest of the function remains the same...
   const success = await userStore.changePassword(oldPassword.value, newPassword.value)
 
   if (success) {
-    // Upon success, log the user out to force re-authentication
     authStore.logout()
-    alert('Password changed successfully! Please log in with your new password.')
+    notificationService.success('Password changed successfully! Please log in again.')
     router.push('/login')
   }
 }

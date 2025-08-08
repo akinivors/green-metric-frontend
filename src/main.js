@@ -3,8 +3,12 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth.store'
-import { useUserStore } from './stores/user.store' // <-- Import user store
+import { useUserStore } from './stores/user.store'
 import './assets/main.css'
+
+// NEW: Import Toast library
+import Toast from 'vue-toastification'
+import 'vue-toastification/dist/index.css'
 
 // --- Main App Initialization Function ---
 async function startApp() {
@@ -12,6 +16,23 @@ async function startApp() {
 
   // Install Pinia first, as other stores depend on it
   app.use(createPinia())
+
+  // NEW: Configure and use the Toast plugin
+  const toastOptions = {
+    position: 'top-right',
+    timeout: 5000,
+    closeOnClick: true,
+    pauseOnFocusLoss: true,
+    pauseOnHover: true,
+    draggable: true,
+    draggablePercent: 0.6,
+    showCloseButtonOnHover: false,
+    hideProgressBar: false,
+    closeButton: 'button',
+    icon: true,
+    rtl: false,
+  }
+  app.use(Toast, toastOptions)
 
   // Now that Pinia is installed, we can use the stores
   const authStore = useAuthStore()
