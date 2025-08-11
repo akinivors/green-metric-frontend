@@ -22,7 +22,7 @@
         />
         <div class="flex space-x-2">
           <BaseButton @click="applyFilters" class="w-full">Apply Filters</BaseButton>
-          <BaseButton @click="vehicleStore.clearFilters" variant="secondary" class="w-full"
+          <BaseButton @click="vehicleStore.clearFilters" theme="secondary" class="w-full"
             >Clear</BaseButton
           >
         </div>
@@ -61,23 +61,12 @@
                 No entries found for the selected criteria.
               </td>
             </tr>
-            <tr v-for="entry in vehicleStore.entries" :key="entry.id">
-              <td class="px-6 py-4">{{ entry.entryDate }}</td>
-              <td class="px-6 py-4">{{ entry.publicTransportCount }}</td>
-              <td class="px-6 py-4">{{ entry.privateVehicleCount }}</td>
-              <td class="px-6 py-4">{{ entry.motorcycleCount }}</td>
-              <td class="px-6 py-4">{{ entry.zevCount }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  @click="handleDelete(entry)"
-                  class="text-red-600 hover:text-red-900"
-                  :disabled="vehicleStore.loading"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
+            <VehicleEntryRow
+              v-for="entry in vehicleStore.entries"
+              :key="entry.id"
+              :entry="entry"
+              @delete="handleDelete"
+            />
           </tbody>
         </table>
         <div class="flex justify-between items-center mt-4">
@@ -86,14 +75,14 @@
           </span>
           <div>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="vehicleStore.changePage(vehicleStore.pagination.page - 1)"
               :disabled="vehicleStore.pagination.page <= 0"
             >
               Previous
             </BaseButton>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="vehicleStore.changePage(vehicleStore.pagination.page + 1)"
               :disabled="vehicleStore.pagination.page >= vehicleStore.pagination.totalPages - 1"
               class="ml-2"
@@ -157,7 +146,7 @@
           />
         </div>
         <div class="pt-4">
-          <BaseButton type="submit" :disabled="vehicleStore.loading">
+          <BaseButton type="submit" :loading="vehicleStore.loading">
             {{ vehicleStore.loading ? 'Submitting...' : 'Log Entries' }}
           </BaseButton>
         </div>
@@ -177,7 +166,7 @@
             <p class="font-medium text-gray-700">{{ metric.description }}</p>
             <p class="text-2xl font-bold text-gray-900">{{ metric.metricValue }}</p>
           </div>
-          <BaseButton variant="secondary" @click="openEditModal(metric)">Edit</BaseButton>
+          <BaseButton theme="secondary" @click="openEditModal(metric)">Edit</BaseButton>
         </div>
       </div>
     </div>
@@ -200,6 +189,7 @@ import { useMetricsStore } from '@/stores/metrics.store'
 import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import VehicleEntryRow from '@/components/VehicleEntryRow.vue'
 import notificationService from '@/services/notificationService'
 import { useModal } from '@/services/modalService'
 
@@ -226,13 +216,16 @@ const filterErrors = ref({
 })
 
 // NEW: Watch for changes on the FILTER date fields
-watch([() => vehicleStore.filters.startDate, () => vehicleStore.filters.endDate], ([newStartDate, newEndDate]) => {
-  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
-    filterErrors.value.date = 'End date cannot be before start date.'
-  } else {
-    filterErrors.value.date = ''
-  }
-})
+watch(
+  [() => vehicleStore.filters.startDate, () => vehicleStore.filters.endDate],
+  ([newStartDate, newEndDate]) => {
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      filterErrors.value.date = 'End date cannot be before start date.'
+    } else {
+      filterErrors.value.date = ''
+    }
+  },
+)
 
 // Modal state for editing metrics
 const isEditModalOpen = ref(false)

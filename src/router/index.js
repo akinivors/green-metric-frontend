@@ -3,6 +3,8 @@ import AppLayout from '../layouts/AppLayout.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LoginView from '../views/LoginView.vue'
 import UsersListView from '../views/UsersListView.vue'
+import EditUserView from '../views/EditUserView.vue'
+import UserProfileView from '../views/UserProfileView.vue'
 import VehicleEntryView from '../views/VehicleEntryView.vue'
 import WaterConsumptionView from '../views/WaterConsumptionView.vue'
 import ElectricityConsumptionView from '../views/ElectricityConsumptionView.vue'
@@ -34,6 +36,18 @@ const router = createRouter({
           name: 'users-list',
           component: UsersListView,
           meta: { requiresAdmin: true }, // <-- Add this meta flag
+        },
+        {
+          path: '/users/:id/edit',
+          name: 'edit-user',
+          component: EditUserView,
+          meta: { requiresAdmin: true },
+        },
+        {
+          path: '/users/:id',
+          name: 'user-profile',
+          component: UserProfileView,
+          meta: { requiresAdmin: true },
         },
         {
           path: '/users/create',

@@ -2,12 +2,11 @@
 import { ref, reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from './auth.store'
 import { useUserStore } from './user.store'
+import { apiService } from '@/services/apiService' // <-- Import the new service
 
 export const useWaterStore = defineStore('water', () => {
   const router = useRouter()
-  const authStore = useAuthStore()
 
   const entries = ref([])
   const pagination = reactive({ page: 0, totalPages: 1 })
@@ -40,18 +39,8 @@ export const useWaterStore = defineStore('water', () => {
         params.append('unitId', unitToFilter)
       }
 
-      const response = await fetch(
-        `http://localhost:8080/api/consumption/water?${params.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${authStore.token}` },
-        },
-      )
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to fetch water entries.')
-      }
-
-      const data = await response.json()
+      // OLD fetch logic is replaced with this one line
+      const data = await apiService.get(`/consumption/water?${params.toString()}`)
       entries.value = data.content
       pagination.page = data.number
       pagination.totalPages = data.totalPages
@@ -67,18 +56,8 @@ export const useWaterStore = defineStore('water', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch('http://localhost:8080/api/consumption/water', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: JSON.stringify(logData),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to submit log.')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.post('/consumption/water', logData)
       await getEntries() // Refresh list
       return true
     } catch (e) {
@@ -95,15 +74,8 @@ export const useWaterStore = defineStore('water', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch(`http://localhost:8080/api/consumption/water/${entryId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) {
-        throw new Error('Failed to delete water consumption entry.')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.delete(`/consumption/water/${entryId}`)
       // Refresh the entry list after successful deletion
       await getEntries()
       return true

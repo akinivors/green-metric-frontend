@@ -36,8 +36,8 @@
           :error="errors.confirmPassword"
         />
         <div>
-          <BaseButton type="submit" class="w-full" :disabled="userStore.loading">
-            {{ userStore.loading ? 'Updating...' : 'Update Password' }}
+          <BaseButton type="submit" class="w-full" :loading="userStore.loading">
+            Update Password
           </BaseButton>
         </div>
       </form>

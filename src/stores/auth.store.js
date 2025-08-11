@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useUserStore } from './user.store' // Import the user store
+import { apiService } from '@/services/apiService' // <-- Import the new service
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem('token') || null)
@@ -9,16 +10,8 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(username, password) {
     error.value = null
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Login failed')
-      }
-      const receivedToken = await response.text()
+      // OLD fetch logic is replaced with this one line
+      const receivedToken = await apiService.post('/auth/login', { username, password })
       token.value = receivedToken
       localStorage.setItem('token', receivedToken)
 

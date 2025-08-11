@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
-import { useAuthStore } from './auth.store'
+import { apiService } from '@/services/apiService' // <-- Import the new service
 
 export const useUserStore = defineStore('user', () => {
   // --- State ---
@@ -9,22 +9,29 @@ export const useUserStore = defineStore('user', () => {
   const units = ref([]) // Units from real API
   const error = ref(null)
   const loading = ref(false)
+  const pagination = ref({
+    number: 0,
+    totalPages: 0,
+    totalElements: 0,
+    size: 10,
+  }) // Add pagination state with default values
 
   // --- Actions ---
 
   // NEW fetchAllUsers ACTION
-  async function fetchAllUsers() {
+  async function fetchAllUsers(page = 0, size = 10) {
     loading.value = true
     error.value = null
-    const authStore = useAuthStore()
     try {
-      const response = await fetch('http://localhost:8080/api/users', {
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) throw new Error('Failed to fetch users.')
-      users.value = await response.json()
+      // OLD fetch logic is replaced with this one line
+      const data = await apiService.get(`/users?page=${page}&size=${size}`)
+      users.value = data.content
+      pagination.value = {
+        number: data.number,
+        totalPages: data.totalPages,
+        totalElements: data.totalElements,
+        size: data.size,
+      }
     } catch (e) {
       error.value = e.message
     } finally {
@@ -36,15 +43,9 @@ export const useUserStore = defineStore('user', () => {
   async function fetchUnits() {
     loading.value = true
     error.value = null
-    const authStore = useAuthStore()
     try {
-      const response = await fetch('http://localhost:8080/api/units', {
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) throw new Error('Failed to fetch units.')
-      units.value = await response.json()
+      // OLD fetch logic is replaced with this one line
+      units.value = await apiService.get('/units')
     } catch (e) {
       error.value = e.message
     } finally {
@@ -53,58 +54,20 @@ export const useUserStore = defineStore('user', () => {
   }
 
   async function fetchUser() {
-    const authStore = useAuthStore()
-    if (!authStore.token) return
-
     try {
-      const response = await fetch('http://localhost:8080/api/users/me', {
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) {
-        if (response.status === 401) {
-          // Token is invalid, clear it
-          authStore.logout()
-          return
-        }
-        throw new Error('Failed to fetch user data.')
-      }
-      user.value = await response.json()
+      // OLD fetch logic is replaced with this one line
+      user.value = await apiService.get('/users/me')
     } catch (e) {
-      console.error('Fetch user error:', e)
-      user.value = null
-      // If it's a network error, clear the token to prevent infinite loading
-      if (e.message.includes('fetch') || e.name === 'TypeError') {
-        console.warn('Network error detected, clearing token')
-        authStore.logout()
-      }
+      console.error('Error fetching user profile:', e)
     }
   }
 
   async function changePassword(oldPassword, newPassword) {
-    // ... (existing changePassword function remains the same)
     loading.value = true
     error.value = null
-    const authStore = useAuthStore()
-    if (!authStore.token) {
-      error.value = 'You are not authenticated.'
-      loading.value = false
-      return false
-    }
     try {
-      const response = await fetch('http://localhost:8080/api/users/change-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: JSON.stringify({ oldPassword, newPassword }),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to change password')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.post('/users/change-password', { oldPassword, newPassword })
       loading.value = false
       return true
     } catch (e) {
@@ -117,21 +80,9 @@ export const useUserStore = defineStore('user', () => {
   async function createUser(userData) {
     loading.value = true
     error.value = null
-    const authStore = useAuthStore()
-
     try {
-      const response = await fetch('http://localhost:8080/api/users/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: JSON.stringify(userData),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to create user.')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.post('/users/register', userData)
       loading.value = false
       return true
     } catch (e) {
@@ -145,23 +96,78 @@ export const useUserStore = defineStore('user', () => {
   async function deleteUser(userId) {
     loading.value = true
     error.value = null
-    const authStore = useAuthStore()
     try {
-      const response = await fetch(`http://localhost:8080/api/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) {
-        throw new Error('Failed to delete user.')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.delete(`/users/${userId}`)
       // Refresh the user list after successful deletion
       await fetchAllUsers()
       return true
     } catch (e) {
       error.value = e.message
       return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // NEW: Action to fetch a single user
+  async function fetchSingleUser(id) {
+    loading.value = true
+    error.value = null
+    try {
+      // OLD fetch logic is replaced with this one line
+      const user = await apiService.get(`/users/${id}`)
+      // We can return the user directly, no need to store it in a shared state
+      return user
+    } catch (e) {
+      error.value = e.message
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // NEW: Action to update a user
+  async function updateUser(id, userData) {
+    loading.value = true
+    error.value = null
+    try {
+      // OLD fetch logic is replaced with this one line
+      await apiService.put(`/users/${id}`, userData)
+      return true
+    } catch (e) {
+      error.value = e.message
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // NEW: Action to reset a user's password
+  async function resetPassword(userId) {
+    loading.value = true
+    error.value = null
+    try {
+      // OLD fetch logic is replaced with this one line
+      return await apiService.post(`/users/${userId}/reset-password`)
+    } catch (e) {
+      error.value = e.message
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // NEW: Action to fetch the activity log for a specific user
+  async function fetchActivityLog(userId, page = 0, size = 10) {
+    loading.value = true
+    error.value = null
+    try {
+      // OLD fetch logic is replaced with this one line
+      return await apiService.get(`/activity-log?userId=${userId}&page=${page}&size=${size}`)
+    } catch (e) {
+      error.value = e.message
+      return null
     } finally {
       loading.value = false
     }
@@ -177,12 +183,17 @@ export const useUserStore = defineStore('user', () => {
     units, // Real API units
     error,
     loading,
+    pagination, // <-- Add pagination
     fetchUser,
     fetchAllUsers, // <-- Expose the new action
     fetchUnits, // Real API fetchUnits
     changePassword,
     createUser,
     deleteUser, // Export the new deleteUser function
+    fetchSingleUser, // <-- Add this
+    updateUser, // <-- Add this
+    resetPassword, // <-- Add this
+    fetchActivityLog, // <-- Add this
     clearUser,
   }
 })

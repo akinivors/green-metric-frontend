@@ -2,13 +2,12 @@
 import { ref, reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from './auth.store'
 import { useUserStore } from './user.store'
 import { useMetricsStore } from './metrics.store' // Use the central metrics store
+import { apiService } from '@/services/apiService' // <-- Import the new service
 
 export const useElectricityStore = defineStore('electricity', () => {
   const router = useRouter()
-  const authStore = useAuthStore()
   const metricsStore = useMetricsStore() // Use the central metrics store
 
   const entries = ref([])
@@ -40,18 +39,8 @@ export const useElectricityStore = defineStore('electricity', () => {
         params.append('unitId', unitToFilter)
       }
 
-      const response = await fetch(
-        `http://localhost:8080/api/consumption/electricity?${params.toString()}`,
-        {
-          headers: { Authorization: `Bearer ${authStore.token}` },
-        },
-      )
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to fetch electricity entries.')
-      }
-
-      const data = await response.json()
+      // OLD fetch logic is replaced with this one line
+      const data = await apiService.get(`/consumption/electricity?${params.toString()}`)
       entries.value = data.content
       pagination.page = data.number
       pagination.totalPages = data.totalPages
@@ -66,18 +55,8 @@ export const useElectricityStore = defineStore('electricity', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch('http://localhost:8080/api/consumption/electricity', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: JSON.stringify(logData),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to submit log.')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.post('/consumption/electricity', logData)
       await getEntries() // Refresh list
       return true
     } catch (e) {
@@ -93,15 +72,8 @@ export const useElectricityStore = defineStore('electricity', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch(`http://localhost:8080/api/consumption/electricity/${entryId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) {
-        throw new Error('Failed to delete electricity consumption entry.')
-      }
+      // OLD fetch logic is replaced with this one line
+      await apiService.delete(`/consumption/electricity/${entryId}`)
       // Refresh the entry list after successful deletion
       await getEntries()
       return true

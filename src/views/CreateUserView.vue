@@ -64,9 +64,7 @@
           />
         </div>
         <div class="pt-4">
-          <BaseButton type="submit" :disabled="userStore.loading">
-            {{ userStore.loading ? 'Creating...' : 'Create User' }}
-          </BaseButton>
+          <BaseButton type="submit" :loading="userStore.loading"> Create User </BaseButton>
         </div>
       </form>
     </div>

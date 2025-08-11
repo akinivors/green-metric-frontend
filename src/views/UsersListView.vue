@@ -8,7 +8,7 @@
     </div>
 
     <div v-if="userStore.loading" class="text-center p-4">Loading users...</div>
-    <div v-if="userStore.error" class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-md">
+    <div v-else-if="userStore.error" class="p-3 mb-4 text-sm text-red-700 bg-red-100 rounded-md">
       {{ userStore.error }}
     </div>
 
@@ -20,13 +20,13 @@
               scope="col"
               class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
             >
-              Full Name
+              Username
             </th>
             <th
               scope="col"
               class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
             >
-              Username
+              Full Name
             </th>
             <th
               scope="col"
@@ -38,53 +38,74 @@
               scope="col"
               class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
             >
-              Actions
+              Unit
+            </th>
+            <th scope="col" class="relative px-6 py-3">
+              <span class="sr-only">Actions</span>
             </th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-if="userStore.users.length === 0">
-            <td colspan="4" class="px-6 py-4 text-center text-gray-500">No users found.</td>
+          <tr v-if="usersWithUnitNames.length === 0">
+            <td colspan="5" class="px-6 py-4 text-center text-gray-500">No users found.</td>
           </tr>
-          <tr v-for="user in userStore.users" :key="user.id">
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.fullName }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">{{ user.username }}</td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span
-                class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800"
-              >
-                {{ user.role }}
-              </span>
-            </td>
-            <td
-              v-if="user.id !== userStore.user.id"
-              class="px-6 py-4 whitespace-nowrap text-sm font-medium"
-            >
-              <button
-                @click="handleDelete(user)"
-                class="text-red-600 hover:text-red-900"
-                :disabled="userStore.loading"
-              >
-                Delete
-              </button>
-            </td>
-            <td v-else class="px-6 py-4"></td>
-          </tr>
+          <UserListRow
+            v-for="user in usersWithUnitNames"
+            :key="user.id"
+            :user="user"
+            @delete="handleDelete"
+            @reset-password="handleResetPassword"
+          />
         </tbody>
       </table>
+
+      <!-- Pagination -->
+      <div class="px-6 py-4 border-t border-gray-200">
+        <PaginationControls :pagination="pagination" @page-changed="handlePageChange" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useUserStore } from '@/stores/user.store'
+import { useUnitsStore } from '@/stores/units.store'
 import BaseButton from '@/components/BaseButton.vue'
+import PaginationControls from '@/components/PaginationControls.vue'
+import UserListRow from '@/components/UserListRow.vue'
 import notificationService from '@/services/notificationService'
 import { useModal } from '@/services/modalService'
 
 const userStore = useUserStore()
+const unitsStore = useUnitsStore()
 const { confirm } = useModal()
+
+// Computed property to add unit names to users
+const usersWithUnitNames = computed(() => {
+  const allUsers = userStore.users || []
+
+  return allUsers
+    .map((user) => ({
+      ...user,
+      unitName: unitsStore.units.find((unit) => unit.id === user.unitId)?.name || 'N/A',
+    }))
+    .sort((a, b) => {
+      // If user 'a' is the current logged-in user, put them first
+      if (a.id === userStore.user?.id) return -1
+      // If user 'b' is the current logged-in user, put them first
+      if (b.id === userStore.user?.id) return 1
+      // Otherwise, maintain original order
+      return 0
+    })
+})
+
+const pagination = computed(() => userStore.pagination)
+
+// Handle page change
+const handlePageChange = (page) => {
+  userStore.fetchAllUsers(page)
+}
 
 // Add delete handler function
 const handleDelete = async (user) => {
@@ -104,7 +125,39 @@ const handleDelete = async (user) => {
   }
 }
 
-onMounted(() => {
-  userStore.fetchAllUsers()
+// Add reset password handler function
+const handleResetPassword = async (user) => {
+  const confirmed = await confirm({
+    title: 'Reset Password',
+    message: `Are you sure you want to reset the password for '${user.username}'? They will be forced to change it on their next login.`,
+    confirmButtonText: 'Reset Password',
+  })
+
+  if (confirmed) {
+    const result = await userStore.resetPassword(user.id)
+    if (result && result.temporaryPassword) {
+      // Use the modal service again to show the new password
+      await confirm({
+        title: 'Password Reset Successfully',
+        message: `The new temporary password for '${user.username}' is: ${result.temporaryPassword}`,
+        confirmButtonText: 'OK',
+        cancelButtonText: 'Copy Password', // A little UX enhancement
+      }).then((isOk) => {
+        if (!isOk) {
+          // If 'Copy Password' was clicked
+          navigator.clipboard.writeText(result.temporaryPassword)
+          notificationService.success('Password copied to clipboard!')
+        }
+      })
+    } else {
+      notificationService.error(userStore.error || 'Failed to reset password.')
+    }
+  }
+}
+
+onMounted(async () => {
+  // Fetch units first, then users to ensure unit names are available
+  await unitsStore.fetchUnits()
+  userStore.fetchAllUsers(0, 10) // Start with page 0, 10 items per page
 })
 </script>

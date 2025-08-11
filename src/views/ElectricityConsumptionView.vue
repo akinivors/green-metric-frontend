@@ -31,7 +31,7 @@
         />
         <div class="flex space-x-2">
           <BaseButton @click="applyFilters" class="w-full"> Apply </BaseButton>
-          <BaseButton @click="electricityStore.clearFilters" variant="secondary" class="w-full">
+          <BaseButton @click="electricityStore.clearFilters" theme="secondary" class="w-full">
             Clear
           </BaseButton>
         </div>
@@ -65,23 +65,13 @@
             <tr v-if="!electricityStore.entries.length">
               <td colspan="5" class="text-center p-4">No entries found.</td>
             </tr>
-            <tr v-for="entry in electricityStore.entries" :key="entry.id">
-              <td class="px-6 py-4">{{ entry.periodStartDate }} to {{ entry.periodEndDate }}</td>
-              <td class="px-6 py-4">{{ entry.unitName }}</td>
-              <td class="px-6 py-4">{{ entry.consumptionKwh }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">
-                {{ entry.submittedByUsername }}
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  @click="handleDelete(entry)"
-                  class="text-red-600 hover:text-red-900"
-                  :disabled="electricityStore.loading"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
+            <ConsumptionDataRow
+              v-for="entry in electricityStore.entries"
+              :key="entry.id"
+              :entry="entry"
+              type="electricity"
+              @delete="handleDelete"
+            />
           </tbody>
         </table>
 
@@ -93,14 +83,14 @@
           </span>
           <div>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="electricityStore.changePage(electricityStore.pagination.page - 1)"
               :disabled="electricityStore.pagination.page <= 0"
             >
               Previous
             </BaseButton>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="electricityStore.changePage(electricityStore.pagination.page + 1)"
               :disabled="
                 electricityStore.pagination.page >= electricityStore.pagination.totalPages - 1
@@ -153,7 +143,7 @@
           />
         </div>
         <div class="pt-4">
-          <BaseButton type="submit" :disabled="electricityStore.loading">
+          <BaseButton type="submit" :loading="electricityStore.loading">
             {{ electricityStore.loading ? 'Submitting...' : 'Log Consumption' }}
           </BaseButton>
         </div>
@@ -177,7 +167,7 @@
               {{ metric.metricValue }} {{ metric.unit }}
             </p>
           </div>
-          <BaseButton variant="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
+          <BaseButton theme="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
         </div>
       </div>
     </div>
@@ -203,6 +193,7 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import ConsumptionDataRow from '@/components/ConsumptionDataRow.vue'
 import notificationService from '@/services/notificationService'
 import { useModal } from '@/services/modalService'
 
@@ -244,13 +235,16 @@ const filterErrors = ref({
 })
 
 // NEW: Watch for changes on the FILTER date fields
-watch([() => electricityStore.filters.startDate, () => electricityStore.filters.endDate], ([newStartDate, newEndDate]) => {
-  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
-    filterErrors.value.date = 'End date cannot be before start date.'
-  } else {
-    filterErrors.value.date = ''
-  }
-})
+watch(
+  [() => electricityStore.filters.startDate, () => electricityStore.filters.endDate],
+  ([newStartDate, newEndDate]) => {
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      filterErrors.value.date = 'End date cannot be before start date.'
+    } else {
+      filterErrors.value.date = ''
+    }
+  },
+)
 
 // Add computed property to filter the correct metrics
 const electricityMetrics = computed(() => {

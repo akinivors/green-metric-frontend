@@ -17,9 +17,7 @@
         </div>
 
         <div class="flex justify-end space-x-4 mt-6">
-          <BaseButton type="button" variant="secondary" @click="$emit('close')">
-            Cancel
-          </BaseButton>
+          <BaseButton type="button" theme="secondary" @click="$emit('close')"> Cancel </BaseButton>
           <BaseButton type="submit"> Save Changes </BaseButton>
         </div>
       </form>

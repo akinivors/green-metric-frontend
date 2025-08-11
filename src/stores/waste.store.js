@@ -2,17 +2,23 @@
 import { ref, reactive } from 'vue'
 import { defineStore } from 'pinia'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from './auth.store'
+import { apiService } from '../services/apiService'
 
 export const useWasteStore = defineStore('waste', () => {
   const router = useRouter()
-  const authStore = useAuthStore()
 
+  // Reactive state
   const entries = ref([])
-  const pagination = reactive({ page: 0, totalPages: 1 })
-  const filters = reactive({ startDate: '', endDate: '' })
   const loading = ref(false)
   const error = ref(null)
+  const filters = reactive({
+    startDate: '',
+    endDate: '',
+  })
+  const pagination = reactive({
+    page: 0,
+    totalPages: 0,
+  })
 
   // --- Actions Connected to Live API ---
 
@@ -25,15 +31,7 @@ export const useWasteStore = defineStore('waste', () => {
       if (filters.endDate) params.append('endDate', filters.endDate)
       params.append('page', pagination.page)
 
-      const response = await fetch(`http://localhost:8080/api/entries/waste?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${authStore.token}` },
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to fetch waste entries.')
-      }
-
-      const data = await response.json()
+      const data = await apiService.get(`/entries/waste?${params.toString()}`)
       entries.value = data.content
       pagination.page = data.number
       pagination.totalPages = data.totalPages
@@ -49,19 +47,8 @@ export const useWasteStore = defineStore('waste', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch('http://localhost:8080/api/entries/waste', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authStore.token}`,
-        },
-        body: JSON.stringify(logData),
-      })
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.message || 'Failed to submit log.')
-      }
-      await getEntries() // Refresh list
+      await apiService.post('/entries/waste', logData)
+      await getEntries() // Refresh the list with the latest data
       return true
     } catch (e) {
       error.value = e.message
@@ -77,15 +64,7 @@ export const useWasteStore = defineStore('waste', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await fetch(`http://localhost:8080/api/entries/waste/${entryId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authStore.token}`,
-        },
-      })
-      if (!response.ok) {
-        throw new Error('Failed to delete waste data entry.')
-      }
+      await apiService.delete(`/entries/waste/${entryId}`)
       // Refresh the entry list after successful deletion
       await getEntries()
       return true

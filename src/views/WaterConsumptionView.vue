@@ -13,7 +13,13 @@
           v-model="waterStore.filters.startDate"
           :error="filterErrors.date"
         />
-        <BaseInput id="endDate" label="End Date" type="date" v-model="waterStore.filters.endDate" :error="filterErrors.date" />
+        <BaseInput
+          id="endDate"
+          label="End Date"
+          type="date"
+          v-model="waterStore.filters.endDate"
+          :error="filterErrors.date"
+        />
         <BaseSelect
           v-if="userStore.user?.role === 'ADMIN'"
           id="unitFilter"
@@ -23,7 +29,7 @@
         />
         <div class="flex space-x-2">
           <BaseButton @click="applyFilters" class="w-full">Apply</BaseButton>
-          <BaseButton @click="waterStore.clearFilters" variant="secondary" class="w-full"
+          <BaseButton @click="waterStore.clearFilters" theme="secondary" class="w-full"
             >Clear</BaseButton
           >
         </div>
@@ -43,10 +49,7 @@
                 Consumption (Tons)
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Recycled Water (Liters)
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                Treated Water (Liters)
+                Water Usage Details
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                 Submitted By
@@ -58,25 +61,14 @@
           </thead>
           <tbody class="bg-white divide-y divide-gray-200">
             <tr v-if="!waterStore.entries.length">
-              <td colspan="7" class="text-center p-4">No entries found.</td>
+              <td colspan="6" class="text-center p-4">No entries found.</td>
             </tr>
-            <tr v-for="entry in waterStore.entries" :key="entry.id">
-              <td class="px-6 py-4">{{ entry.periodStartDate }} to {{ entry.periodEndDate }}</td>
-              <td class="px-6 py-4">{{ entry.unitName }}</td>
-              <td class="px-6 py-4">{{ entry.consumptionTon }}</td>
-              <td class="px-6 py-4">{{ entry.recycledWaterUsageLiters }}</td>
-              <td class="px-6 py-4">{{ entry.treatedWaterConsumptionLiters }}</td>
-              <td class="px-6 py-4 text-sm text-gray-500">{{ entry.submittedByUsername }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <button
-                  @click="handleDelete(entry)"
-                  class="text-red-600 hover:text-red-900"
-                  :disabled="waterStore.loading"
-                >
-                  Delete
-                </button>
-              </td>
-            </tr>
+            <WaterConsumptionRow
+              v-for="entry in waterStore.entries"
+              :key="entry.id"
+              :entry="entry"
+              @delete="handleDelete"
+            />
           </tbody>
         </table>
         <div class="flex justify-between items-center mt-4">
@@ -85,14 +77,14 @@
           </span>
           <div>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="waterStore.changePage(waterStore.pagination.page - 1)"
               :disabled="waterStore.pagination.page <= 0"
             >
               Previous
             </BaseButton>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="waterStore.changePage(waterStore.pagination.page + 1)"
               :disabled="waterStore.pagination.page >= waterStore.pagination.totalPages - 1"
               class="ml-2"
@@ -157,9 +149,9 @@
           />
         </div>
         <div class="pt-4">
-          <BaseButton type="submit" :disabled="waterStore.loading">{{
-            waterStore.loading ? 'Submitting...' : 'Log Consumption'
-          }}</BaseButton>
+          <BaseButton type="submit" :loading="waterStore.loading">
+            {{ waterStore.loading ? 'Submitting...' : 'Log Consumption' }}
+          </BaseButton>
         </div>
       </form>
     </div>
@@ -179,7 +171,7 @@
               {{ metric.metricValue }} {{ metric.unit || '' }}
             </p>
           </div>
-          <BaseButton variant="secondary" @click="openEditModal(metric)">Edit</BaseButton>
+          <BaseButton theme="secondary" @click="openEditModal(metric)">Edit</BaseButton>
         </div>
       </div>
     </div>
@@ -204,6 +196,7 @@ import BaseInput from '@/components/BaseInput.vue'
 import BaseButton from '@/components/BaseButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import EditMetricModal from '@/components/EditMetricModal.vue'
+import WaterConsumptionRow from '@/components/WaterConsumptionRow.vue'
 import notificationService from '@/services/notificationService'
 import { useModal } from '@/services/modalService'
 
@@ -252,13 +245,16 @@ const filterErrors = ref({
 })
 
 // NEW: Watch for changes on the FILTER date fields
-watch([() => waterStore.filters.startDate, () => waterStore.filters.endDate], ([newStartDate, newEndDate]) => {
-  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
-    filterErrors.value.date = 'End date cannot be before start date.'
-  } else {
-    filterErrors.value.date = ''
-  }
-})
+watch(
+  [() => waterStore.filters.startDate, () => waterStore.filters.endDate],
+  ([newStartDate, newEndDate]) => {
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      filterErrors.value.date = 'End date cannot be before start date.'
+    } else {
+      filterErrors.value.date = ''
+    }
+  },
+)
 
 // Using real API units from userStore (consistent with our architecture)
 const unitOptions = computed(() => {

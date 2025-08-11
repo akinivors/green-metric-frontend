@@ -15,10 +15,16 @@
           v-model="wasteStore.filters.startDate"
           :error="filterErrors.date"
         />
-        <BaseInput id="endDate" label="End Date" type="date" v-model="wasteStore.filters.endDate" :error="filterErrors.date" />
+        <BaseInput
+          id="endDate"
+          label="End Date"
+          type="date"
+          v-model="wasteStore.filters.endDate"
+          :error="filterErrors.date"
+        />
         <div class="flex space-x-2">
           <BaseButton @click="applyFilters" class="w-full"> Apply Filters </BaseButton>
-          <BaseButton @click="wasteStore.clearFilters" variant="secondary" class="w-full">
+          <BaseButton @click="wasteStore.clearFilters" theme="secondary" class="w-full">
             Clear
           </BaseButton>
         </div>
@@ -70,14 +76,14 @@
           </span>
           <div>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="wasteStore.changePage(wasteStore.pagination.page - 1)"
               :disabled="wasteStore.pagination.page <= 0"
             >
               Previous
             </BaseButton>
             <BaseButton
-              variant="secondary"
+              theme="secondary"
               @click="wasteStore.changePage(wasteStore.pagination.page + 1)"
               :disabled="wasteStore.pagination.page >= wasteStore.pagination.totalPages - 1"
               class="ml-2"
@@ -180,8 +186,8 @@
         </div>
 
         <div class="pt-4">
-          <BaseButton type="submit" :disabled="wasteStore.loading">
-            {{ wasteStore.loading ? 'Submitting...' : 'Log Waste Data' }}
+          <BaseButton type="submit" :loading="wasteStore.loading" class="w-full">
+            {{ editingEntry ? 'Update Entry' : 'Log Entry' }}
           </BaseButton>
         </div>
       </form>
@@ -204,7 +210,7 @@
               {{ metric.metricValue }} {{ metric.unit || '' }}
             </p>
           </div>
-          <BaseButton variant="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
+          <BaseButton theme="secondary" @click="openEditModal(metric)"> Edit </BaseButton>
         </div>
       </div>
     </div>
@@ -263,13 +269,16 @@ const filterErrors = ref({
 })
 
 // NEW: Watch for changes on the FILTER date fields
-watch([() => wasteStore.filters.startDate, () => wasteStore.filters.endDate], ([newStartDate, newEndDate]) => {
-  if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
-    filterErrors.value.date = 'End date cannot be before start date.'
-  } else {
-    filterErrors.value.date = ''
-  }
-})
+watch(
+  [() => wasteStore.filters.startDate, () => wasteStore.filters.endDate],
+  ([newStartDate, newEndDate]) => {
+    if (newStartDate && newEndDate && new Date(newEndDate) < new Date(newStartDate)) {
+      filterErrors.value.date = 'End date cannot be before start date.'
+    } else {
+      filterErrors.value.date = ''
+    }
+  },
+)
 
 const handleLogSubmit = async () => {
   const success = await wasteStore.submitLog(logForm)

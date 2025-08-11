@@ -43,7 +43,7 @@
               {{ metric.metricValue }} {{ metric.unit || '' }}
             </p>
           </div>
-          <BaseButton variant="secondary" @click="openEditModal(metric)">Edit</BaseButton>
+          <BaseButton theme="secondary" @click="openEditModal(metric)">Edit</BaseButton>
         </div>
       </div>
     </div>
