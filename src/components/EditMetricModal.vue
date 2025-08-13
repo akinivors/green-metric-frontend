@@ -2,7 +2,7 @@
   <div class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
     <div class="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-xl">
       <h2 class="text-xl font-bold text-gray-900">Edit Metric</h2>
-      <p class="text-sm text-gray-600">{{ metricToEdit.description }}</p>
+      <p class="text-sm text-gray-600">{{ formattedDescription }}</p>
 
       <form @submit.prevent="handleSubmit">
         <div class="flex items-end space-x-2">
@@ -33,6 +33,10 @@ import BaseButton from '@/components/BaseButton.vue'
 const props = defineProps({
   metric: {
     type: Object,
+    required: true,
+  },
+  formattedDescription: {
+    type: String,
     required: true,
   },
 })

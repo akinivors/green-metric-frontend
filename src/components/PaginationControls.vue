@@ -20,7 +20,7 @@
       </button>
     </div>
     <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-      <div>
+      <div v-if="totalItems > 0">
         <p class="text-sm text-gray-700">
           Showing
           <span class="font-medium">{{ itemRangeStart }}</span>
