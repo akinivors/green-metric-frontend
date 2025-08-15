@@ -134,7 +134,7 @@
           </div>
           <div class="flex space-x-2">
             <BaseButton theme="secondary" @click="openHistoryModal(metric)">History</BaseButton>
-            <BaseButton theme="secondary" @click="openEditModal(metric)">Edit</BaseButton>
+            <BaseButton @click="openEditModal(metric)">Edit</BaseButton>
           </div>
         </div>
       </div>
@@ -155,6 +155,7 @@
       :formatted-description="formatDescription(selectedMetric.description)"
       @close="closeHistoryModal"
       @page-changed="handleHistoryModalPageChange"
+      @delete="handleDeleteHistoryEntry"
     />
   </div>
 </template>
@@ -169,10 +170,12 @@ import BaseInput from '../components/BaseInput.vue'
 import EditMetricModal from '../components/EditMetricModal.vue'
 import MetricHistoryModal from '../components/MetricHistoryModal.vue'
 import notificationService from '../services/notificationService'
+import { useModal } from '../services/modalService'
 
 const metricsStore = useMetricsStore()
 const route = useRoute()
 const router = useRouter()
+const { confirm } = useModal()
 
 const filters = reactive({
   category: '',
@@ -305,6 +308,35 @@ async function handleSaveMetric(updatedMetric) {
     notificationService.success('Metric updated successfully!')
   } else {
     notificationService.error(metricsStore.error || 'Failed to update metric.')
+  }
+}
+
+// Handle delete metric history entry
+async function handleDeleteHistoryEntry(entry) {
+  const confirmed = await confirm({
+    title: 'Delete Metric History Entry',
+    message: `Are you sure you want to delete this metric history entry for ${entry.metricDate}?`,
+    confirmButtonText: 'Delete',
+  })
+
+  if (confirmed) {
+    const success = await metricsStore.deleteMetricHistoryEntry(entry.id)
+    if (success) {
+      notificationService.success('Metric history entry deleted successfully.')
+      // Refresh the history modal data
+      if (selectedMetric.value?.metricKey) {
+        const historyData = await metricsStore.getMetricHistoryByKey({
+          metricKey: selectedMetric.value.metricKey,
+          page: selectedMetricHistory.value.number || 0,
+          size: 10
+        })
+        if (historyData) {
+          selectedMetricHistory.value = historyData
+        }
+      }
+    } else {
+      notificationService.error(metricsStore.error || 'Failed to delete metric history entry.')
+    }
   }
 }
 

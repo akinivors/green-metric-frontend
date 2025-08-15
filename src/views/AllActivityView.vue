@@ -10,6 +10,44 @@
     <div class="p-8 bg-white rounded-lg shadow-md">
       <h2 class="text-xl font-semibold text-gray-800 mb-4">All Entries</h2>
 
+      <!-- Filter Controls -->
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6 items-end">
+        <BaseInput
+          id="dateAfter"
+          label="Start Date"
+          type="date"
+          v-model="dashboardStore.activityLogFilters.dateAfter"
+        />
+        <BaseInput
+          id="dateBefore"
+          label="End Date"
+          type="date"
+          v-model="dashboardStore.activityLogFilters.dateBefore"
+        />
+        <BaseSelect
+          id="actionType"
+          label="Action Type"
+          v-model="dashboardStore.activityLogFilters.actionType"
+          :options="actionTypeOptions"
+        />
+        <BaseSelect
+          id="dataType"
+          label="Data Type"
+          v-model="dashboardStore.activityLogFilters.dataType"
+          :options="dataTypeOptions"
+        />
+        <BaseInput
+          id="username"
+          label="Username"
+          type="text"
+          v-model="dashboardStore.activityLogFilters.username"
+        />
+        <div class="flex space-x-2">
+          <BaseButton @click="applyFilters" class="w-full">Apply Filters</BaseButton>
+          <BaseButton @click="clearFilters" theme="secondary" class="w-full">Clear</BaseButton>
+        </div>
+      </div>
+
       <div v-if="dashboardStore.loading" class="text-center p-8">Loading activity data...</div>
       <div v-else-if="dashboardStore.error" class="p-4 bg-red-100 text-red-700 rounded-md">
         {{ dashboardStore.error }}
@@ -46,24 +84,85 @@
             </tr>
           </tbody>
         </table>
+
+        <!-- Pagination Controls -->
+        <div v-if="dashboardStore.activityLog.length > 0" class="flex justify-between items-center mt-4">
+          <span class="text-sm text-gray-600">
+            Page {{ dashboardStore.activityLogPagination.page + 1 }} of {{ dashboardStore.activityLogPagination.totalPages }}
+          </span>
+          <div>
+            <BaseButton
+              theme="secondary"
+              @click="dashboardStore.changeActivityLogPage(dashboardStore.activityLogPagination.page - 1)"
+              :disabled="dashboardStore.activityLogPagination.page <= 0"
+            >
+              Previous
+            </BaseButton>
+            <BaseButton
+              theme="secondary"
+              @click="dashboardStore.changeActivityLogPage(dashboardStore.activityLogPagination.page + 1)"
+              :disabled="dashboardStore.activityLogPagination.page >= dashboardStore.activityLogPagination.totalPages - 1"
+              class="ml-2"
+            >
+              Next
+            </BaseButton>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue' // <-- Add ref
+import { ref, watch } from 'vue' // <-- Add ref
+import { useRoute } from 'vue-router'
 import { useDashboardStore } from '@/stores/dashboard.store'
 import { useAuthStore } from '@/stores/auth.store' // <-- Add this import
 import BaseButton from '@/components/BaseButton.vue' // <-- Add this import
+import BaseInput from '@/components/BaseInput.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
 import { useToast } from 'vue-toastification' // <-- Add this import
 
 const dashboardStore = useDashboardStore()
 const authStore = useAuthStore() // <-- Initialize the auth store
+const route = useRoute()
 const toast = useToast() // <-- Add this line
 
 // AFTER: Add this ref for loading state
 const isDownloading = ref(false)
+
+// Action type options for filtering
+const actionTypeOptions = [
+  { value: '', label: 'All Action Types' },
+  { value: 'CREATE', label: 'Create' },
+  { value: 'UPDATE', label: 'Update' },
+  { value: 'DELETE', label: 'Delete' },
+  { value: 'VIEW', label: 'View' },
+  { value: 'LOGIN', label: 'Login' },
+  { value: 'LOGOUT', label: 'Logout' },
+  { value: 'DOWNLOAD', label: 'Download' }
+]
+
+// Data type options for filtering
+const dataTypeOptions = [
+  { value: '', label: 'All Data Types' },
+  { value: 'USER', label: 'User' },
+  { value: 'VEHICLE_ENTRY', label: 'Vehicle Entry' },
+  { value: 'WASTE_DATA', label: 'Waste Data' },
+  { value: 'ELECTRICITY_CONSUMPTION', label: 'Electricity Consumption' },
+  { value: 'WATER_CONSUMPTION', label: 'Water Consumption' },
+  { value: 'METRIC', label: 'Metric' },
+  { value: 'SYSTEM', label: 'System' }
+]
+
+// Filter functions
+const applyFilters = () => {
+  dashboardStore.applyActivityLogFilters()
+}
+
+const clearFilters = () => {
+  dashboardStore.clearActivityLogFilters()
+}
 
 // AFTER: Add this new function to handle the download
 const handleDownloadReport = async () => {
@@ -110,7 +209,12 @@ const handleDownloadReport = async () => {
   }
 }
 
-onMounted(() => {
-  dashboardStore.getActivityLog()
-})
+// Watch route changes to handle pagination
+watch(
+  () => route.query,
+  (newQuery) => {
+    dashboardStore.initializeActivityLogFromUrl(newQuery)
+  },
+  { immediate: true }
+)
 </script>

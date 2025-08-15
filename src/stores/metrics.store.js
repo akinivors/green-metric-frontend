@@ -132,6 +132,22 @@ export const useMetricsStore = defineStore('metrics', () => {
     }
   }
 
+  // Add delete function for metric history entries
+  async function deleteMetricHistoryEntry(entryId) {
+    loading.value = true
+    error.value = null
+    try {
+      await apiService.delete(`/metrics/${entryId}`)
+      return true
+    } catch (e) {
+      error.value = e.message
+      console.error('Error deleting metric history entry:', e)
+      return false
+    } finally {
+      loading.value = false
+    }
+  }
+
   function changeHistoryPage(newPage) {
     if (newPage >= 0 && newPage < historyPagination.totalPages) {
       const query = {
@@ -186,6 +202,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     createMetric,
     getMetricHistory,
     getMetricHistoryByKey,
+    deleteMetricHistoryEntry,
     changeHistoryPage,
     initializeHistoryFromUrl
   }
